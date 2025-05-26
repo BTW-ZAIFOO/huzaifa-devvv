@@ -12,7 +12,46 @@ const userSchema = new mongoose.Schema({
     maxLength: [32, "Password cannot have more than 32 characters."],
     select: false,
   },
-  phone: String,
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user",
+  },
+  bio: {
+    type: String,
+    default: "",
+  },
+  avatar: {
+    type: String,
+    default: null,
+  },
+  location: {
+    type: String,
+    default: "",
+  },
+  interests: {
+    type: [String],
+    default: [],
+  },
+  status: {
+    type: String,
+    enum: ["online", "offline", "blocked", "banned"],
+    default: "online",
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now,
+  },
+  isReported: {
+    type: Boolean,
+    default: false,
+  },
+  reportReasons: [String],
+  flaggedWords: [String],
+  moderationScore: {
+    type: Number,
+    default: 0,
+  },
   accountVerified: { type: Boolean, default: false },
   verificationCode: Number,
   verificationCodeExpire: Date,

@@ -1,0 +1,68 @@
+import { OpenAI } from "openai";
+import { config } from "dotenv";
+
+config({ path: "./config.env" });
+
+const openai = new OpenAI({
+    apiKey: "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",
+});
+
+// Moderate text content using OpenAI's moderation API
+export const moderateContent = async (text) => {
+    try {
+        const response = await openai.moderations.create({
+            input: text,
+        });
+
+        return response.results[0];
+    } catch (error) {
+        console.error("OpenAI moderation error:", error);
+        return {
+            flagged: false,
+            categories: {},
+            category_scores: {},
+            error: error.message,
+        };
+    }
+};
+
+// Convert audio to text using OpenAI's Whisper API
+export const transcribeAudio = async (audioBuffer) => {
+    try {
+        const response = await openai.audio.transcriptions.create({
+            file: audioBuffer,
+            model: "whisper-1",
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("OpenAI transcription error:", error);
+        throw new Error(`Failed to transcribe audio: ${error.message}`);
+    }
+};
+
+// Get AI suggestion for a reply
+export const getSuggestion = async (conversationContext) => {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a helpful assistant that suggests short, friendly replies in a chat conversation. Keep your suggestions under 100 characters.",
+                },
+                {
+                    role: "user",
+                    content: `Based on this conversation, suggest a brief, natural reply: ${conversationContext}`,
+                },
+            ],
+            max_tokens: 60,
+            temperature: 0.7,
+        });
+
+        return response.choices[0].message.content.trim();
+    } catch (error) {
+        console.error("OpenAI suggestion error:", error);
+        return "I'm not sure how to respond to that.";
+    }
+};

@@ -7,6 +7,8 @@ import {
   getUser,
   forgotPassword,
   resetPassword,
+  getAllUsers,
+  searchUsers,
 } from "../controllers/userControllers.js";
 import { isAuthenticated } from "../middlewares/auth.js";
 
@@ -19,5 +21,7 @@ router.get("/logout", isAuthenticated, logout);
 router.get("/me", isAuthenticated, getUser);
 router.post("/password/forgot", forgotPassword);
 router.put("/password/reset/:token", resetPassword);
+router.get("/all", isAuthenticated, getAllUsers);
+router.get("/search", isAuthenticated, searchUsers);
 
 export default router;

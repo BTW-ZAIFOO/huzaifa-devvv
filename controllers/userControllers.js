@@ -10,17 +10,9 @@ const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
-    const { name, email, phone, password, verificationMethod } = req.body;
-    if (!name || !email || !phone || !password || !verificationMethod) {
+    const { name, email, password, verificationMethod, role } = req.body;
+    if (!name || !email || !password || !verificationMethod) {
       return next(new ErrorHandler("All fields are required.", 400));
-    }
-    function validatePhoneNumber(phone) {
-      const phoneRegex = /^\+923\d{9}$/;
-      return phoneRegex.test(phone);
-    }
-
-    if (!validatePhoneNumber(phone)) {
-      return next(new ErrorHandler("Invalid phone number.", 400));
     }
 
     const existingUser = await User.findOne({
@@ -29,20 +21,15 @@ export const register = catchAsyncError(async (req, res, next) => {
           email,
           accountVerified: true,
         },
-        {
-          phone,
-          accountVerified: true,
-        },
       ],
     });
 
     if (existingUser) {
-      return next(new ErrorHandler("Phone or Email is already used.", 400));
+      return next(new ErrorHandler("Email is already used.", 400));
     }
 
     const registerationAttemptsByUser = await User.find({
       $or: [
-        { phone, accountVerified: false },
         { email, accountVerified: false },
       ],
     });
@@ -56,11 +43,12 @@ export const register = catchAsyncError(async (req, res, next) => {
       );
     }
 
+    // Create the user with the specified role (admin or regular user)
     const userData = {
       name,
       email,
-      phone,
       password,
+      role: role === "admin" ? "admin" : "user" // Set role based on registration type
     };
 
     const user = await User.create(userData);
@@ -71,7 +59,6 @@ export const register = catchAsyncError(async (req, res, next) => {
       verificationCode,
       name,
       email,
-      phone,
       res
     );
   } catch (error) {
@@ -84,7 +71,6 @@ async function sendVerificationCode(
   verificationCode,
   name,
   email,
-  phone,
   res
 ) {
   try {
@@ -94,20 +80,6 @@ async function sendVerificationCode(
       res.status(200).json({
         success: true,
         message: `Verification email successfully sent to ${name}`,
-      });
-    } else if (verificationMethod === "phone") {
-      const verificationCodeWithSpace = verificationCode
-        .toString()
-        .split("")
-        .join(" ");
-      await client.calls.create({
-        twiml: `<Response><Say>Your verification code is ${verificationCodeWithSpace}. Your verification code is ${verificationCodeWithSpace}.</Say></Response>`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: phone,
-      });
-      res.status(200).json({
-        success: true,
-        message: `OTP sent.`,
       });
     } else {
       return res.status(500).json({
@@ -146,26 +118,13 @@ function generateEmailTemplate(verificationCode) {
 }
 
 export const verifyOTP = catchAsyncError(async (req, res, next) => {
-  const { email, otp, phone } = req.body;
-
-  function validatePhoneNumber(phone) {
-    const phoneRegex = /^\+923\d{9}$/;
-    return phoneRegex.test(phone);
-  }
-
-  if (!validatePhoneNumber(phone)) {
-    return next(new ErrorHandler("Invalid phone number.", 400));
-  }
+  const { email, otp } = req.body;
 
   try {
     const userAllEntries = await User.find({
       $or: [
         {
           email,
-          accountVerified: false,
-        },
-        {
-          phone,
           accountVerified: false,
         },
       ],
@@ -183,7 +142,6 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
       await User.deleteMany({
         _id: { $ne: user._id },
         $or: [
-          { phone, accountVerified: false },
           { email, accountVerified: false },
         ],
       });
@@ -200,8 +158,6 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     const verificationCodeExpire = new Date(
       user.verificationCodeExpire
     ).getTime();
-    console.log(currentTime);
-    console.log(verificationCodeExpire);
     if (currentTime > verificationCodeExpire) {
       return next(new ErrorHandler("OTP Expired.", 400));
     }
@@ -222,16 +178,21 @@ export const login = catchAsyncError(async (req, res, next) => {
   if (!email || !password) {
     return next(new ErrorHandler("Email and password are required.", 400));
   }
+
   const user = await User.findOne({ email, accountVerified: true }).select(
     "+password"
   );
+
   if (!user) {
     return next(new ErrorHandler("Invalid email or password.", 400));
   }
+
   const isPasswordMatched = await user.comparePassword(password);
   if (!isPasswordMatched) {
     return next(new ErrorHandler("Invalid email or password.", 400));
   }
+
+  // Both admins and regular users use the same login flow now
   sendToken(user, 200, "User logged in successfully.", res);
 });
 
@@ -324,4 +285,24 @@ export const resetPassword = catchAsyncError(async (req, res, next) => {
   await user.save();
 
   sendToken(user, 200, "Reset Password Successfully.", res);
+});
+
+export const getAllUsers = catchAsyncError(async (req, res, next) => {
+  const users = await User.find({
+    _id: { $ne: req.user._id }
+  }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
+  res.status(200).json({ success: true, users });
+});
+
+export const searchUsers = catchAsyncError(async (req, res, next) => {
+  const { q } = req.query;
+  if (!q || q.trim() === "") {
+    return res.status(200).json({ success: true, users: [] });
+  }
+  const users = await User.find({
+    _id: { $ne: req.user._id },
+    name: { $regex: q, $options: "i" },
+    accountVerified: true
+  }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
+  res.status(200).json({ success: true, users });
 });

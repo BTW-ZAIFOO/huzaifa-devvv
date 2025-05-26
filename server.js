@@ -1,5 +1,8 @@
-import { app } from "./app.js";
+import { server } from "./app.js";
+import { config } from "dotenv";
 
-app.listen(process.env.PORT, () => {
+config({ path: "./config.env" });
+
+server.listen(process.env.PORT, () => {
   console.log(`Server listening on port ${process.env.PORT}`);
 });
