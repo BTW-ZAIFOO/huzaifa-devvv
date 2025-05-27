@@ -197,22 +197,24 @@ export const markAsRead = catchAsyncError(async (req, res, next) => {
 
 export const getAllMessages = catchAsyncError(async (req, res, next) => {
     const { limit = 50, page = 1 } = req.query;
+    const parsedLimit = parseInt(limit);
+    const skip = (parseInt(page) - 1) * parsedLimit;
 
-    const skip = (page - 1) * limit;
-    const messages = await Message.find()
-        .populate("sender", "name email avatar")
-        .populate("recipient", "name email avatar")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-
-    const totalMessages = await Message.countDocuments();
+    const [messages, totalMessages] = await Promise.all([
+        Message.find()
+            .populate("sender", "name email avatar")
+            .populate("recipient", "name email avatar")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parsedLimit),
+        Message.countDocuments()
+    ]);
 
     res.status(200).json({
         success: true,
         messages,
         totalMessages,
         currentPage: parseInt(page),
-        totalPages: Math.ceil(totalMessages / limit),
+        totalPages: Math.ceil(totalMessages / parsedLimit),
     });
 });

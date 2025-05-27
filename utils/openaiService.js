@@ -7,7 +7,6 @@ const openai = new OpenAI({
     apiKey: "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",
 });
 
-// Moderate text content using OpenAI's moderation API
 export const moderateContent = async (text) => {
     try {
         const response = await openai.moderations.create({
@@ -26,7 +25,6 @@ export const moderateContent = async (text) => {
     }
 };
 
-// Convert audio to text using OpenAI's Whisper API
 export const transcribeAudio = async (audioBuffer) => {
     try {
         const response = await openai.audio.transcriptions.create({
@@ -41,7 +39,6 @@ export const transcribeAudio = async (audioBuffer) => {
     }
 };
 
-// Get AI suggestion for a reply
 export const getSuggestion = async (conversationContext) => {
     try {
         const response = await openai.chat.completions.create({

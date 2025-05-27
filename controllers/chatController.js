@@ -88,18 +88,12 @@ export const getChatById = catchAsyncError(async (req, res, next) => {
         .populate("participants", "name email avatar status lastSeen")
         .populate("lastMessage");
 
-    if (!chat) {
-        return next(new ErrorHandler("Chat not found", 404));
-    }
+    if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
-    if (!chat.participants.some(p => p._id.toString() === req.user._id.toString())) {
+    if (!chat.participants.some(p => p._id.toString() === req.user._id.toString()))
         return next(new ErrorHandler("Access denied", 403));
-    }
 
-    res.status(200).json({
-        success: true,
-        chat,
-    });
+    res.status(200).json({ success: true, chat });
 });
 
 export const blockUnblockChat = catchAsyncError(async (req, res, next) => {

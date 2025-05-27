@@ -120,15 +120,13 @@ export const handleReport = catchAsyncError(async (req, res, next) => {
         }
         user.moderationScore += 2;
 
-        if (user.moderationScore >= 5) {
-            user.status = "banned";
-        }
+        if (user.moderationScore >= 5) user.status = "banned";
 
         await user.save();
 
         res.status(200).json({
             success: true,
-            message: "User reported successfully",
+            message: "User reported successfully"
         });
     }
     else {
