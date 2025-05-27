@@ -4,7 +4,6 @@ import { moderateContent, transcribeAudio, getSuggestion } from "../utils/openai
 import { Message } from "../models/messageModel.js";
 import { User } from "../models/userModal.js";
 
-// Moderate text content
 export const moderateText = catchAsyncError(async (req, res, next) => {
     const { text } = req.body;
 
@@ -14,26 +13,19 @@ export const moderateText = catchAsyncError(async (req, res, next) => {
 
     const moderationResult = await moderateContent(text);
 
-    // Return the moderation result
     res.status(200).json({
         success: true,
         result: moderationResult,
     });
 });
 
-// Transcribe voice message
 export const transcribeVoice = catchAsyncError(async (req, res, next) => {
     if (!req.file) {
         return next(new ErrorHandler("Audio file is required", 400));
     }
 
-    // Get audio buffer
     const audioBuffer = req.file.buffer;
-
-    // Call OpenAI to transcribe
     const transcription = await transcribeAudio(audioBuffer);
-
-    // Moderate the transcribed text
     const moderationResult = await moderateContent(transcription);
 
     res.status(200).json({
@@ -43,7 +35,6 @@ export const transcribeVoice = catchAsyncError(async (req, res, next) => {
     });
 });
 
-// Get AI-powered reply suggestions
 export const getReplyRecommendations = catchAsyncError(async (req, res, next) => {
     const { conversation } = req.body;
 
@@ -51,7 +42,6 @@ export const getReplyRecommendations = catchAsyncError(async (req, res, next) =>
         return next(new ErrorHandler("Conversation context is required", 400));
     }
 
-    // Get AI suggestion for reply
     const suggestion = await getSuggestion(conversation);
 
     res.status(200).json({
@@ -60,7 +50,6 @@ export const getReplyRecommendations = catchAsyncError(async (req, res, next) =>
     });
 });
 
-// Get all reported messages (admin only)
 export const getReportedMessages = catchAsyncError(async (req, res, next) => {
     const reportedMessages = await Message.find({ isReported: true })
         .populate("sender", "name email avatar")
@@ -73,7 +62,6 @@ export const getReportedMessages = catchAsyncError(async (req, res, next) => {
     });
 });
 
-// Get all reported users (admin only)
 export const getReportedUsers = catchAsyncError(async (req, res, next) => {
     const reportedUsers = await User.find({ isReported: true })
         .select("name email avatar phone status reportReasons flaggedWords");
@@ -84,7 +72,6 @@ export const getReportedUsers = catchAsyncError(async (req, res, next) => {
     });
 });
 
-// Handle report (message or user)
 export const handleReport = catchAsyncError(async (req, res, next) => {
     const { type, id, reason } = req.body;
 
@@ -94,9 +81,8 @@ export const handleReport = catchAsyncError(async (req, res, next) => {
         );
     }
 
-    // Handle report based on type
     if (type === "message") {
-        // Report a message
+
         const message = await Message.findById(id);
 
         if (!message) {
@@ -107,7 +93,6 @@ export const handleReport = catchAsyncError(async (req, res, next) => {
         message.reportReason = reason;
         await message.save();
 
-        // Update user's moderation score
         const sender = await User.findById(message.sender);
         if (sender) {
             sender.moderationScore += 1;
@@ -123,7 +108,6 @@ export const handleReport = catchAsyncError(async (req, res, next) => {
         });
     }
     else if (type === "user") {
-        // Report a user
         const user = await User.findById(id);
 
         if (!user) {

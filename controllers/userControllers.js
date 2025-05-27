@@ -43,12 +43,11 @@ export const register = catchAsyncError(async (req, res, next) => {
       );
     }
 
-    // Create the user with the specified role (admin or regular user)
     const userData = {
       name,
       email,
       password,
-      role: role === "admin" ? "admin" : "user" // Set role based on registration type
+      role: role === "admin" ? "admin" : "user"
     };
 
     const user = await User.create(userData);
@@ -192,7 +191,6 @@ export const login = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Invalid email or password.", 400));
   }
 
-  // Both admins and regular users use the same login flow now
   sendToken(user, 200, "User logged in successfully.", res);
 });
 

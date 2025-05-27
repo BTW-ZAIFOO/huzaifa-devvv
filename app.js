@@ -27,13 +27,11 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/moderation", moderationRouter);
 
-// Socket.io setup
 const server = createServer(app);
 export const io = new Server(server, {
   cors: {
@@ -43,7 +41,6 @@ export const io = new Server(server, {
   },
 });
 
-// Socket.io connection
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
