@@ -1,5 +1,6 @@
 import express from "express";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
+
 import {
     sendMessage,
     getMessages,
@@ -8,9 +9,11 @@ import {
     markAsRead,
     getAllMessages
 } from "../controllers/messageController.js";
+
 import multer from "multer";
 
 const storage = multer.memoryStorage();
+
 const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 } 
