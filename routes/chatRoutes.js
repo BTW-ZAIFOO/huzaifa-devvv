@@ -14,7 +14,6 @@ router.post("/create", isAuthenticated, createOrGetChat);
 router.get("/user", isAuthenticated, getUserChats);
 router.get("/:chatId", isAuthenticated, getChatById);
 router.put("/block/:chatId", isAuthenticated, blockUnblockChat);
-
 router.get("/all", isAuthenticated, isAdmin, getAllChats);
 
 export default router;

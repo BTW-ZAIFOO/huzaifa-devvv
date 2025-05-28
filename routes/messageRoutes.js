@@ -23,7 +23,6 @@ router.get("/:chatId", isAuthenticated, getMessages);
 router.delete("/:messageId", isAuthenticated, deleteMessage);
 router.post("/report/:messageId", isAuthenticated, reportMessage);
 router.put("/read/:messageId", isAuthenticated, markAsRead);
-
 router.get("/all", isAuthenticated, isAdmin, getAllMessages);
 
 export default router;

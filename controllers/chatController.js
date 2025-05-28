@@ -2,8 +2,6 @@ import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../middlewares/error.js";
 import { Chat } from "../models/chatModel.js";
 import { User } from "../models/userModal.js";
-import { Message } from "../models/messageModel.js";
-import mongoose from "mongoose";
 
 export const createChat = catchAsyncError(async (req, res, next) => {
     const { recipientId } = req.body;
