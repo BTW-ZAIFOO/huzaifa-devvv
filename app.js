@@ -32,6 +32,7 @@ app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/moderation", moderationRouter);
 
 const server = createServer(app);
+
 export const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
