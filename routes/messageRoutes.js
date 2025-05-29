@@ -1,5 +1,6 @@
 import express from "express";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
+import multer from "multer";
 
 import {
     sendMessage,
@@ -9,8 +10,6 @@ import {
     markAsRead,
     getAllMessages
 } from "../controllers/messageController.js";
-
-import multer from "multer";
 
 const storage = multer.memoryStorage();
 

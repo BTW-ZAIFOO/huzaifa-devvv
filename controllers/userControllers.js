@@ -232,7 +232,7 @@ export const forgotPassword = catchAsyncError(async (req, res, next) => {
   try {
     sendEmail({
       email: user.email,
-      subject: "MERN AUTHENTICATION APP RESET PASSWORD",
+      subject: "aiChat RESET PASSWORD",
       message,
     });
     res.status(200).json({

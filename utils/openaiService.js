@@ -58,7 +58,8 @@ export const getSuggestion = async (conversationContext) => {
         });
 
         return response.choices[0].message.content.trim();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("OpenAI suggestion error:", error);
         return "I'm not sure how to respond to that.";
     }
