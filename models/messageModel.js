@@ -35,7 +35,7 @@ const messageSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["sent", "delivered", "read", "deleted"],
+            enum: ["sent", "delivered", "read", "deleted", "permanently_deleted"],
             default: "sent",
         },
         isReported: {
@@ -44,6 +44,15 @@ const messageSchema = new mongoose.Schema(
         },
         reportReason: {
             type: String,
+            default: null,
+        },
+        permanentlyDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        deletedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
             default: null,
         },
     },

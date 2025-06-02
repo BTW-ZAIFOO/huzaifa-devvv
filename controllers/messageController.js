@@ -111,6 +111,7 @@ export const getMessages = catchAsyncError(async (req, res, next) => {
 
 export const deleteMessage = catchAsyncError(async (req, res, next) => {
     const { messageId } = req.params;
+    const { permanent } = req.body || {}; // Safely access the body
 
     const message = await Message.findById(messageId);
     if (!message) {
@@ -124,16 +125,30 @@ export const deleteMessage = catchAsyncError(async (req, res, next) => {
         return next(new ErrorHandler("Access denied", 403));
     }
 
-    message.status = "deleted";
-    message.content = "This message has been deleted";
+    if (permanent || req.user.role === "admin") {
+        message.status = "permanently_deleted";
+        message.permanentlyDeleted = true;
+        message.content = "This message has been permanently deleted";
+    } else {
+        message.status = "deleted";
+        message.content = "This message has been deleted";
+    }
+
+    message.deletedBy = req.user._id;
     await message.save();
 
-    io.to(message.sender.toString()).emit("message-deleted", messageId);
-    io.to(message.recipient.toString()).emit("message-deleted", messageId);
+    // Emit socket events with appropriate data
+    const eventData = {
+        messageId,
+        permanent: !!permanent,
+        deletedBy: req.user._id
+    };
+
+    io.to(message.chat.toString()).emit("message-deleted", eventData);
 
     res.status(200).json({
         success: true,
-        message: "Message deleted successfully",
+        message: permanent ? "Message permanently deleted successfully" : "Message deleted successfully",
     });
 });
 
