@@ -54,8 +54,25 @@ io.on("connection", (socket) => {
     console.log(`User left room: ${roomId}`);
   });
 
-  socket.on("send-message", (data) => {
-    io.to(data.room).emit("receive-message", data);
+  socket.on("join-admin-room", () => {
+    socket.join("admin-room");
+    console.log("Admin joined admin-room");
+  });
+
+  socket.on("admin-delete-message", ({ messageId, chatId }) => {
+    io.to(chatId).emit("admin-message-deleted", { messageId });
+  });
+
+  socket.on("admin-block-user", ({ userId, notification }) => {
+    io.to(userId).emit("admin-user-blocked", notification);
+  });
+
+  socket.on("admin-ban-user", ({ userId, notification }) => {
+    io.to(userId).emit("admin-user-banned", notification);
+  });
+
+  socket.on("admin-send-notification", ({ userId, notification }) => {
+    io.to(userId).emit("admin-notification", notification);
   });
 
   socket.on("disconnect", () => {

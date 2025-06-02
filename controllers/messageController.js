@@ -111,18 +111,11 @@ export const getMessages = catchAsyncError(async (req, res, next) => {
 
 export const deleteMessage = catchAsyncError(async (req, res, next) => {
     const { messageId } = req.params;
-    const { permanent } = req.body || {}; // Safely access the body
+    const { permanent } = req.body || {};
 
     const message = await Message.findById(messageId);
     if (!message) {
         return next(new ErrorHandler("Message not found", 404));
-    }
-
-    if (
-        message.sender.toString() !== req.user._id.toString() &&
-        req.user.role !== "admin"
-    ) {
-        return next(new ErrorHandler("Access denied", 403));
     }
 
     if (permanent || req.user.role === "admin") {
@@ -137,7 +130,6 @@ export const deleteMessage = catchAsyncError(async (req, res, next) => {
     message.deletedBy = req.user._id;
     await message.save();
 
-    // Emit socket events with appropriate data
     const eventData = {
         messageId,
         permanent: !!permanent,
