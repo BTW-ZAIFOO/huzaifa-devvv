@@ -4,7 +4,7 @@ import { config } from "dotenv";
 config({ path: "./config.env" });
 
 const openai = new OpenAI({
-    apiKey: "sk-abcdef1234567890abcdef1234567890abcdef12",
+    apiKey: process.env.OPENAI_API_KEY,
 });
 
 export const moderateContent = async (text) => {
