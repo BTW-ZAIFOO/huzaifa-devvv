@@ -1,28 +1,19 @@
 import express from "express";
+import * as userController from "../controllers/userControllers.js";
 import { isAuthenticated } from "../middlewares/auth.js";
-
-import {
-  register,
-  verifyOTP,
-  login,
-  logout,
-  getUser,
-  forgotPassword,
-  resetPassword,
-  getAllUsers,
-  searchUsers,
-} from "../controllers/userControllers.js";
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/otp-verification", verifyOTP);
-router.post("/login", login);
-router.get("/logout", isAuthenticated, logout);
-router.get("/me", isAuthenticated, getUser);
-router.post("/password/forgot", forgotPassword);
-router.put("/password/reset/:token", resetPassword);
-router.get("/all", isAuthenticated, getAllUsers);
-router.get("/search", isAuthenticated, searchUsers);
+router.post("/register", userController.register);
+router.post("/otp-verification", userController.verifyOTP);
+router.post("/login", userController.login);
+router.get("/logout", isAuthenticated, userController.logout);
+router.get("/me", isAuthenticated, userController.getUser);
+router.post("/password/forgot", userController.forgotPassword);
+router.put("/password/reset/:token", userController.resetPassword);
+router.get("/all", isAuthenticated, userController.getAllUsers);
+router.get("/search", isAuthenticated, userController.searchUsers);
+router.post("/status", isAuthenticated, userController.updateUserStatus);
+router.get("/online", isAuthenticated, userController.getOnlineUsers);
 
 export default router;

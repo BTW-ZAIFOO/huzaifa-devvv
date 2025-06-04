@@ -195,6 +195,19 @@ export const login = catchAsyncError(async (req, res, next) => {
 });
 
 export const logout = catchAsyncError(async (req, res, next) => {
+  // Explicitly update user status to offline
+  if (req.user && req.user._id) {
+    try {
+      await User.findByIdAndUpdate(req.user._id, {
+        status: "offline",
+        lastSeen: new Date()
+      });
+    } catch (error) {
+      console.error("Failed to update user status on logout:", error);
+    }
+  }
+
+  // Clear cookie
   res
     .status(200)
     .cookie("token", "", {
@@ -205,6 +218,36 @@ export const logout = catchAsyncError(async (req, res, next) => {
       success: true,
       message: "Logged out successfully.",
     });
+});
+
+// Make sure the updateUserStatus function properly updates the user
+export const updateUserStatus = catchAsyncError(async (req, res, next) => {
+  const { status } = req.body;
+
+  if (!status) {
+    return next(new ErrorHandler("Status is required", 400));
+  }
+
+  if (!["online", "offline", "away"].includes(status)) {
+    return next(new ErrorHandler("Invalid status value", 400));
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      status,
+      lastSeen: status === "offline" ? new Date().toISOString() : req.user.lastSeen
+    },
+    { new: true }
+  );
+
+  console.log(`User ${req.user._id} status updated to ${status}`);
+
+  res.status(200).json({
+    success: true,
+    message: "User status updated successfully",
+    user: updatedUser
+  });
 });
 
 export const getUser = catchAsyncError(async (req, res, next) => {
@@ -303,4 +346,15 @@ export const searchUsers = catchAsyncError(async (req, res, next) => {
     accountVerified: true
   }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
   res.status(200).json({ success: true, users: users || [] });
+});
+
+// Add this new controller function
+export const getOnlineUsers = catchAsyncError(async (req, res, next) => {
+  const onlineUsers = await User.find({ status: "online" })
+    .select("name email avatar status lastSeen");
+
+  res.status(200).json({
+    success: true,
+    users: onlineUsers
+  });
 });
