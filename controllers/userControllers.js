@@ -289,7 +289,7 @@ export const getAllUsers = catchAsyncError(async (req, res, next) => {
   const users = await User.find({
     _id: { $ne: req.user._id }
   }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
-  res.status(200).json({ success: true, users });
+  res.status(200).json({ success: true, users: users || [] });
 });
 
 export const searchUsers = catchAsyncError(async (req, res, next) => {
@@ -302,5 +302,5 @@ export const searchUsers = catchAsyncError(async (req, res, next) => {
     name: { $regex: q, $options: "i" },
     accountVerified: true
   }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
-  res.status(200).json({ success: true, users });
+  res.status(200).json({ success: true, users: users || [] });
 });
