@@ -11,17 +11,23 @@ import moderationRouter from "./routes/moderationRoutes.js";
 import { removeUnverifiedAccounts } from "./automation/removeUnverifiedAccounts.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { handleOptions } from "./utils/corsHandler.js";
 
 export const app = express();
 config({ path: "./config.env" });
 
+// Updated CORS configuration to allow requests from localhost:5173
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Add OPTIONS handler before route handlers
+app.use(handleOptions);
 
 app.use(cookieParser());
 app.use(express.json());
@@ -83,6 +89,7 @@ io.on("connection", (socket) => {
 removeUnverifiedAccounts();
 connection();
 
+// Add error middleware at the end
 app.use(errorMiddleware);
 
 export { server };
