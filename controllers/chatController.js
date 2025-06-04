@@ -34,9 +34,9 @@ export const createChat = catchAsyncError(async (req, res, next) => {
         participants: [req.user._id, recipientId],
     });
 
-    res.status(201).json({
+    return res.status(201).json({
         success: true,
-        chat: newChat,
+        chat: newChat
     });
 });
 

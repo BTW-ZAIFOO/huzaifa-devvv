@@ -28,7 +28,7 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
         }
 
         if (!chat.participants.map(id => id.toString()).includes(req.user._id.toString())) {
-            return next(new ErrorHandler("Access denied", 403));
+            return next(new ErrorHandler("You are not a participant of this chat", 403));
         }
 
         if (chat.isBlocked) {
