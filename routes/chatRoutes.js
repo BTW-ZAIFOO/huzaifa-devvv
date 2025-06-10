@@ -1,11 +1,11 @@
 import express from "express";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
 import {
-    getUserChats,
-    getChatById,
-    blockUnblockChat,
-    getAllChats,
-    createOrGetChat
+  getUserChats,
+  getChatById,
+  blockUnblockChat,
+  getAllChats,
+  createOrGetChat,
 } from "../controllers/chatController.js";
 
 const router = express.Router();

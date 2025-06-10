@@ -3,24 +3,29 @@ import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
 import multer from "multer";
 
 import {
-    sendMessage,
-    getMessages,
-    deleteMessage,
-    reportMessage,
-    markAsRead,
-    getAllMessages
+  sendMessage,
+  getMessages,
+  deleteMessage,
+  reportMessage,
+  markAsRead,
+  getAllMessages,
 } from "../controllers/messageController.js";
 
 const storage = multer.memoryStorage();
 
 const upload = multer({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 }
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 const router = express.Router();
 
-router.post("/send", isAuthenticated, upload.single("voiceMessage"), sendMessage);
+router.post(
+  "/send",
+  isAuthenticated,
+  upload.single("voiceMessage"),
+  sendMessage
+);
 router.get("/:chatId", isAuthenticated, getMessages);
 router.delete("/:messageId", isAuthenticated, deleteMessage);
 router.post("/report/:messageId", isAuthenticated, reportMessage);

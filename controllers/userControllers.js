@@ -6,7 +6,10 @@ import twilio from "twilio";
 import { sendToken } from "../utilis/sendToken.js";
 import crypto from "crypto";
 
-const client = twilio("ACe1de83735fa6aaaa6ebd63ac05e14154", "6efc22ccbd432b920577cea2ea867825");
+const client = twilio(
+  "ACe1de83735fa6aaaa6ebd63ac05e14154",
+  "6efc22ccbd432b920577cea2ea867825"
+);
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
@@ -29,9 +32,7 @@ export const register = catchAsyncError(async (req, res, next) => {
     }
 
     const registerationAttemptsByUser = await User.find({
-      $or: [
-        { email, accountVerified: false },
-      ],
+      $or: [{ email, accountVerified: false }],
     });
 
     if (registerationAttemptsByUser.length > 3) {
@@ -47,7 +48,7 @@ export const register = catchAsyncError(async (req, res, next) => {
       name,
       email,
       password,
-      role: role === "admin" ? "admin" : "user"
+      role: role === "admin" ? "admin" : "user",
     };
 
     const user = await User.create(userData);
@@ -140,9 +141,7 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
 
       await User.deleteMany({
         _id: { $ne: user._id },
-        $or: [
-          { email, accountVerified: false },
-        ],
+        $or: [{ email, accountVerified: false }],
       });
     } else {
       user = userAllEntries[0];
@@ -195,19 +194,17 @@ export const login = catchAsyncError(async (req, res, next) => {
 });
 
 export const logout = catchAsyncError(async (req, res, next) => {
-  // Explicitly update user status to offline
   if (req.user && req.user._id) {
     try {
       await User.findByIdAndUpdate(req.user._id, {
         status: "offline",
-        lastSeen: new Date()
+        lastSeen: new Date(),
       });
     } catch (error) {
       console.error("Failed to update user status on logout:", error);
     }
   }
 
-  // Clear cookie
   res
     .status(200)
     .cookie("token", "", {
@@ -220,7 +217,6 @@ export const logout = catchAsyncError(async (req, res, next) => {
     });
 });
 
-// Make sure the updateUserStatus function properly updates the user
 export const updateUserStatus = catchAsyncError(async (req, res, next) => {
   const { status } = req.body;
 
@@ -236,7 +232,8 @@ export const updateUserStatus = catchAsyncError(async (req, res, next) => {
     req.user._id,
     {
       status,
-      lastSeen: status === "offline" ? new Date().toISOString() : req.user.lastSeen
+      lastSeen:
+        status === "offline" ? new Date().toISOString() : req.user.lastSeen,
     },
     { new: true }
   );
@@ -246,7 +243,7 @@ export const updateUserStatus = catchAsyncError(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "User status updated successfully",
-    user: updatedUser
+    user: updatedUser,
   });
 });
 
@@ -330,8 +327,10 @@ export const resetPassword = catchAsyncError(async (req, res, next) => {
 
 export const getAllUsers = catchAsyncError(async (req, res, next) => {
   const users = await User.find({
-    _id: { $ne: req.user._id }
-  }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
+    _id: { $ne: req.user._id },
+  }).select(
+    "-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire"
+  );
   res.status(200).json({ success: true, users: users || [] });
 });
 
@@ -343,18 +342,20 @@ export const searchUsers = catchAsyncError(async (req, res, next) => {
   const users = await User.find({
     _id: { $ne: req.user._id },
     name: { $regex: q, $options: "i" },
-    accountVerified: true
-  }).select("-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire");
+    accountVerified: true,
+  }).select(
+    "-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire"
+  );
   res.status(200).json({ success: true, users: users || [] });
 });
 
-// Add this new controller function
 export const getOnlineUsers = catchAsyncError(async (req, res, next) => {
-  const onlineUsers = await User.find({ status: "online" })
-    .select("name email avatar status lastSeen");
+  const onlineUsers = await User.find({ status: "online" }).select(
+    "name email avatar status lastSeen"
+  );
 
   res.status(200).json({
     success: true,
-    users: onlineUsers
+    users: onlineUsers,
   });
 });

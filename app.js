@@ -16,7 +16,6 @@ import { handleOptions } from "./utils/corsHandler.js";
 export const app = express();
 config({ path: "./config.env" });
 
-// Updated CORS configuration to allow requests from localhost:5173
 app.use(
   cors({
     origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
@@ -26,7 +25,6 @@ app.use(
   })
 );
 
-// Add OPTIONS handler before route handlers
 app.use(handleOptions);
 
 app.use(cookieParser());
@@ -89,7 +87,6 @@ io.on("connection", (socket) => {
 removeUnverifiedAccounts();
 connection();
 
-// Add error middleware at the end
 app.use(errorMiddleware);
 
 export { server };
