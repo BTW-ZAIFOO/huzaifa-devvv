@@ -7,13 +7,11 @@ import { errorMiddleware } from "./middlewares/error.js";
 import userRouter from "./routes/userRoutes.js";
 import chatRouter from "./routes/chatRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
-import moderationRouter from "./routes/moderationRoutes.js";
 import postRouter from "./routes/postRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import { removeUnverifiedAccounts } from "./automation/removeUnverifiedAccounts.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { handleOptions } from "./utils/corsHandler.js";
 import fs from "fs";
 import path from "path";
 
