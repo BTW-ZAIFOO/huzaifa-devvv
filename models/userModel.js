@@ -63,8 +63,7 @@ userSchema.methods.comparePassword = async function (password) {
 userSchema.methods.generateVerificationCode = async function () {
   const verificationCode = Math.floor(100000 + Math.random() * 900000);
   this.verificationCode = verificationCode;
-  this.verificationCodeExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-  await this.save();
+  this.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
   return verificationCode;
 };
 
@@ -74,7 +73,7 @@ userSchema.methods.generateResetPasswordToken = function () {
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
   return resetToken;
 };
 

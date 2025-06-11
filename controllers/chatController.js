@@ -37,6 +37,7 @@ export const createChat = catchAsyncError(async (req, res, next) => {
   return res.status(201).json({
     success: true,
     chat: newChat,
+    message: "Chat created successfully",
   });
 });
 

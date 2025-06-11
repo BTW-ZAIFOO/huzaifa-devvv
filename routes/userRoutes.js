@@ -42,6 +42,12 @@ router.get("/search", isAuthenticated, userController.searchUsers);
 router.post("/status", isAuthenticated, userController.updateUserStatus);
 router.get("/online", isAuthenticated, userController.getOnlineUsers);
 
+router.post("/follow/:userId", isAuthenticated, userController.followUser);
+router.post("/unfollow/:userId", isAuthenticated, userController.unfollowUser);
+router.get("/followers", isAuthenticated, userController.getFollowers);
+router.get("/following", isAuthenticated, userController.getFollowing);
+router.get("/profile/:userId", isAuthenticated, userController.getUserProfile);
+
 router.put(
   "/update",
   isAuthenticated,

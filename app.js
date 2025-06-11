@@ -8,32 +8,44 @@ import userRouter from "./routes/userRoutes.js";
 import chatRouter from "./routes/chatRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import moderationRouter from "./routes/moderationRoutes.js";
+import postRouter from "./routes/postRoutes.js";
+import adminRouter from "./routes/adminRoutes.js";
 import { removeUnverifiedAccounts } from "./automation/removeUnverifiedAccounts.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { handleOptions } from "./utils/corsHandler.js";
+import fs from "fs";
+import path from "path";
 
 export const app = express();
 config({ path: "./config.env" });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: process.env.FRONTEND_URL,
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
-app.use(handleOptions);
+app.use("/uploads", express.static("uploads"));
 
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const uploadsDir = path.join("uploads");
+const postsDir = path.join("uploads", "posts");
+const avatarsDir = path.join("uploads", "avatars");
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(postsDir)) fs.mkdirSync(postsDir);
+if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
+
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/message", messageRouter);
-app.use("/api/v1/moderation", moderationRouter);
+app.use("/api/v1/post", postRouter);
+app.use("/api/v1/admin", adminRouter);
 
 const server = createServer(app);
 

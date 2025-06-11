@@ -61,6 +61,18 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  followers: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  following: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
 });
 
 userSchema.pre("save", async function (next) {
@@ -98,7 +110,6 @@ userSchema.methods.generateToken = function () {
 
 userSchema.methods.generateResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(20).toString("hex");
-
   this.resetPasswordToken = crypto
     .createHash("sha256")
     .update(resetToken)

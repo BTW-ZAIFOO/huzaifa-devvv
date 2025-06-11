@@ -182,7 +182,7 @@ export const login = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Invalid email or password.", 400));
   }
 
-  sendToken(user, 200, "User logged in successfully.", res);
+  sendToken(user, 200, "Login successful.", res);
 });
 
 export const logout = catchAsyncError(async (req, res, next) => {
@@ -431,3 +431,144 @@ export const updatePassword = catchAsyncError(async (req, res, next) => {
 const uploadFileToStorage = async (file) => {
   return { url: file.name };
 };
+
+export const followUser = catchAsyncError(async (req, res, next) => {
+  const { userId } = req.params;
+
+  if (userId === req.user._id.toString()) {
+    return next(new ErrorHandler("You cannot follow yourself", 400));
+  }
+
+  const userToFollow = await User.findById(userId);
+  if (!userToFollow) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  if (!req.user.following) req.user.following = [];
+  if (!userToFollow.followers) userToFollow.followers = [];
+
+  const isAlreadyFollowing = req.user.following.includes(userId);
+  if (isAlreadyFollowing) {
+    return next(new ErrorHandler("You are already following this user", 400));
+  }
+
+  await User.findByIdAndUpdate(req.user._id, {
+    $push: { following: userId },
+  });
+
+  await User.findByIdAndUpdate(userId, {
+    $push: { followers: req.user._id },
+  });
+
+  try {
+    if (socketRef.current) {
+      socketRef.current.emit("user-followed", {
+        follower: {
+          id: req.user._id,
+          name: req.user.name,
+          avatar: req.user.avatar,
+        },
+        userId,
+      });
+    }
+  } catch (err) {
+    console.error("Socket notification error:", err);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `You are now following ${userToFollow.name}`,
+  });
+});
+
+export const unfollowUser = catchAsyncError(async (req, res, next) => {
+  const { userId } = req.params;
+
+  if (userId === req.user._id.toString()) {
+    return next(new ErrorHandler("You cannot unfollow yourself", 400));
+  }
+
+  const userToUnfollow = await User.findById(userId);
+  if (!userToUnfollow) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  if (!req.user.following) req.user.following = [];
+
+  const isFollowing = req.user.following.includes(userId);
+  if (!isFollowing) {
+    return next(new ErrorHandler("You are not following this user", 400));
+  }
+
+  await User.findByIdAndUpdate(req.user._id, {
+    $pull: { following: userId },
+  });
+
+  await User.findByIdAndUpdate(userId, {
+    $pull: { followers: req.user._id },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `You have unfollowed ${userToUnfollow.name}`,
+  });
+});
+
+export const getFollowers = catchAsyncError(async (req, res, next) => {
+  const userId = req.query.userId || req.user._id;
+
+  const user = await User.findById(userId).populate(
+    "followers",
+    "name email avatar bio status"
+  );
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    followers: user.followers || [],
+  });
+});
+
+export const getFollowing = catchAsyncError(async (req, res, next) => {
+  const userId = req.query.userId || req.user._id;
+
+  const user = await User.findById(userId).populate(
+    "following",
+    "name email avatar bio status"
+  );
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    following: user.following || [],
+  });
+});
+
+export const getUserProfile = catchAsyncError(async (req, res, next) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId)
+    .select(
+      "name email avatar bio location interests followers following status lastSeen createdAt"
+    )
+    .populate("followers", "name avatar")
+    .populate("following", "name avatar");
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  const isFollowing = req.user.following && req.user.following.includes(userId);
+
+  res.status(200).json({
+    success: true,
+    user,
+    isFollowing,
+  });
+});
