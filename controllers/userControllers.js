@@ -75,46 +75,38 @@ async function sendVerificationCode(
 ) {
   try {
     if (verificationMethod === "email") {
-      const message = generateEmailTemplate(verificationCode);
-      sendEmail({ email, subject: "Your Verification Code", message });
-      res.status(200).json({
-        success: true,
-        message: `Verification email successfully sent to ${name}`,
+      await sendEmail({
+        email,
+        subject: "Chat App Email Verification Code",
+        message: `Hello ${name}, your verification code is ${verificationCode}. This code is valid for 5 minutes.`,
       });
-    } else {
-      return res.status(500).json({
-        success: false,
-        message: "Invalid verification method.",
+
+      res.status(201).json({
+        success: true,
+        message: `Verification code sent to ${email}. Please check your inbox.`,
+        verificationMethod,
+        email,
+      });
+    } else if (verificationMethod === "phone") {
+      await client.messages.create({
+        body: `Chat App: Your verification code is ${verificationCode}. This code is valid for 5 minutes.`,
+        to: email,
+        from: process.env.TWILIO_PHONE_NUMBER || "+12345678901",
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Verification code sent to your phone number. Please check your messages.`,
+        verificationMethod,
+        email,
       });
     }
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      success: false,
-      message: "Verification code failed to send.",
-    });
+    throw new ErrorHandler(
+      `Failed to send verification code: ${error.message}`,
+      500
+    );
   }
-}
-
-function generateEmailTemplate(verificationCode) {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-      <h2 style="color: #4CAF50; text-align: center;">Verification Code</h2>
-      <p style="font-size: 16px; color: #333;">Dear User,</p>
-      <p style="font-size: 16px; color: #333;">Your verification code is:</p>
-      <div style="text-align: center; margin: 20px 0;">
-        <span style="display: inline-block; font-size: 24px; font-weight: bold; color: #4CAF50; padding: 10px 20px; border: 1px solid #4CAF50; border-radius: 5px; background-color: #e8f5e9;">
-          ${verificationCode}
-        </span>
-      </div>
-      <p style="font-size: 16px; color: #333;">Please use this code to verify your email address. The code will expire in 10 minutes.</p>
-      <p style="font-size: 16px; color: #333;">If you did not request this, please ignore this email.</p>
-      <footer style="margin-top: 20px; text-align: center; font-size: 14px; color: #999;">
-        <p>Thank you,<br>Your Company Team</p>
-        <p style="font-size: 12px; color: #aaa;">This is an automated message. Please do not reply to this email.</p>
-      </footer>
-    </div>
-  `;
 }
 
 export const verifyOTP = catchAsyncError(async (req, res, next) => {
@@ -379,10 +371,8 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         .filter(Boolean);
     }
 
-    if (req.files && req.files.avatar) {
-      const file = req.files.avatar;
-      const uploadResult = await uploadFileToStorage(file);
-      user.avatar = uploadResult.url;
+    if (req.file) {
+      user.avatar = `/uploads/avatars/${req.file.filename}`;
     }
 
     await user.save();
@@ -407,6 +397,35 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
+});
+
+export const updatePassword = catchAsyncError(async (req, res, next) => {
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    return next(new ErrorHandler("All fields are required", 400));
+  }
+
+  if (newPassword !== confirmPassword) {
+    return next(new ErrorHandler("New passwords do not match", 400));
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  const isPasswordMatched = await user.comparePassword(oldPassword);
+
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Old password is incorrect", 400));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  sendToken(user, 200, res, "Password updated successfully");
 });
 
 const uploadFileToStorage = async (file) => {
