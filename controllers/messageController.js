@@ -48,11 +48,13 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
 
     chat = await Chat.findOne({
       participants: { $all: [req.user._id, recipientId] },
+      isGroupChat: false,
     });
 
     if (!chat) {
       chat = await Chat.create({
         participants: [req.user._id, recipientId],
+        isGroupChat: false,
       });
     }
   }
@@ -70,12 +72,15 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
     moderationResult = await moderateContent(content);
   }
 
-  let recipientUser = chat.participants.find(
-    (id) => id.toString() !== req.user._id.toString()
-  );
+  let recipientUser = null;
 
-  if (!recipientUser) {
-    recipientUser = req.user._id;
+  if (!chat.isGroupChat) {
+    recipientUser = chat.participants.find(
+      (id) => id.toString() !== req.user._id.toString()
+    );
+    if (!recipientUser) {
+      recipientUser = req.user._id;
+    }
   }
 
   const message = await Message.create({
@@ -108,8 +113,30 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
 
 export const getMessages = catchAsyncError(async (req, res, next) => {
   const { chatId } = req.params;
-  const messages = await Message.find({ chat: chatId }).sort({ createdAt: 1 });
-  res.status(200).json({ success: true, messages });
+  const chat = await Chat.findById(chatId);
+
+  if (!chat) {
+    return next(new ErrorHandler("Chat not found", 404));
+  }
+
+  if (
+    !chat.participants
+      .map((id) => id.toString())
+      .includes(req.user._id.toString())
+  ) {
+    return next(
+      new ErrorHandler("You are not a participant of this chat", 403)
+    );
+  }
+
+  const messages = await Message.find({ chat: chatId })
+    .populate("sender", "name avatar")
+    .sort({ createdAt: 1 });
+
+  res.status(200).json({
+    success: true,
+    messages,
+  });
 });
 
 export const deleteMessage = catchAsyncError(async (req, res, next) => {
