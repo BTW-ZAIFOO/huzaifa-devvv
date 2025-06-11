@@ -1,66 +1,188 @@
-import { OpenAI } from "openai";
 import { config } from "dotenv";
+config();
 
-config({ path: "./config.env" });
+export const moderateContent = async (content) => {
+  const inappropriate = /\b(fuck|shit|ass|bitch|cunt|dick|porn|sex)\b/i;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+  let result = {
+    flagged: false,
+    categories: {},
+    reason: null,
+  };
 
-export const moderateContent = async (text) => {
-  try {
-    const response = await openai.moderations.create({
-      input: text,
-    });
-
-    return response.results[0];
-  } catch (error) {
-    console.error("OpenAI moderation error:", error);
-    return {
-      flagged: false,
-      categories: {},
-      category_scores: {},
-      error: error.message,
-    };
+  if (inappropriate.test(content)) {
+    result.flagged = true;
+    result.categories.profanity = true;
+    result.reason = "Contains inappropriate language";
   }
+
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/moderations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({ input: content }),
+      });
+
+      const data = await response.json();
+
+      if (data.results && data.results.length > 0) {
+        const moderationResult = data.results[0];
+        result.flagged = moderationResult.flagged;
+        result.categories = moderationResult.categories;
+      }
+    } catch (error) {
+      console.error("OpenAI moderation API error:", error);
+    }
+  }
+
+  return result;
 };
 
 export const transcribeAudio = async (audioBuffer) => {
-  try {
-    const response = await openai.audio.transcriptions.create({
-      file: audioBuffer,
-      model: "whisper-1",
-    });
+  if (!process.env.OPENAI_API_KEY) {
+    return "Audio transcription unavailable (API key missing)";
+  }
 
-    return response.text;
+  try {
+    const formData = new FormData();
+    const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" });
+    formData.append("file", audioBlob, "audio.mp3");
+    formData.append("model", "whisper-1");
+
+    const response = await fetch(
+      "https://api.openai.com/v1/audio/transcriptions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    return data.text || "Transcription failed";
   } catch (error) {
-    console.error("OpenAI transcription error:", error);
-    throw new Error(`Failed to transcribe audio: ${error.message}`);
+    console.error("Audio transcription error:", error);
+    return "Error transcribing audio";
   }
 };
 
-export const getSuggestion = async (conversationContext) => {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful assistant that suggests short, friendly replies in a chat conversation. Keep your suggestions under 100 characters.",
-        },
-        {
-          role: "user",
-          content: `Based on this conversation, suggest a brief, natural reply: ${conversationContext}`,
-        },
+export const getSuggestion = async (conversation) => {
+  if (!process.env.OPENAI_API_KEY) {
+    return {
+      suggestions: [
+        "Thanks for your message!",
+        "I appreciate your perspective.",
+        "Could you tell me more about that?",
       ],
-      max_tokens: 60,
-      temperature: 0.7,
+      error: "API key missing - using default suggestions",
+    };
+  }
+
+  try {
+    const messages = [
+      {
+        role: "system",
+        content:
+          "You are a helpful assistant that generates 3 short, appropriate reply suggestions based on the conversation context. Keep suggestions concise (under 60 characters) and appropriate for a chat application. Respond with JSON format containing an array of 3 suggestions.",
+      },
+    ];
+
+    if (Array.isArray(conversation)) {
+      conversation.forEach((msg) => {
+        messages.push({
+          role: msg.isUser ? "user" : "assistant",
+          content: msg.content,
+        });
+      });
+    } else if (typeof conversation === "string") {
+      messages.push({
+        role: "user",
+        content: conversation,
+      });
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages,
+        temperature: 0.7,
+        max_tokens: 150,
+      }),
     });
 
-    return response.choices[0].message.content.trim();
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("OpenAI API error:", data.error);
+      return {
+        suggestions: [
+          "Thanks for your message!",
+          "I appreciate your perspective.",
+          "Could you tell me more about that?",
+        ],
+        error: data.error.message,
+      };
+    }
+
+    let suggestions = [];
+    try {
+      const content = data.choices[0].message.content;
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.suggestions)) {
+        suggestions = parsed.suggestions;
+      } else if (Array.isArray(parsed)) {
+        suggestions = parsed;
+      }
+    } catch (e) {
+      const content = data.choices[0].message.content;
+      const lines = content
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(
+          (line) =>
+            line.length > 0 && !line.startsWith("{") && !line.startsWith("}")
+        );
+
+      suggestions = lines
+        .slice(0, 3)
+        .map((line) => line.replace(/^["'\d.\s-]*/, "").replace(/["']$/, ""));
+    }
+
+    while (suggestions.length < 3) {
+      suggestions.push(
+        [
+          "Thanks for sharing!",
+          "Interesting point.",
+          "I see what you mean.",
+          "Good to know!",
+          "Let's discuss further.",
+        ][Math.floor(Math.random() * 5)]
+      );
+    }
+
+    return {
+      suggestions: suggestions.slice(0, 3),
+    };
   } catch (error) {
-    console.error("OpenAI suggestion error:", error);
-    return "I'm not sure how to respond to that.";
+    console.error("Error generating suggestions:", error);
+    return {
+      suggestions: [
+        "Thanks for your message!",
+        "I appreciate your perspective.",
+        "Could you tell me more about that?",
+      ],
+      error: error.message,
+    };
   }
 };

@@ -4,7 +4,6 @@ import { Message } from "../models/messageModel.js";
 import { Chat } from "../models/chatModel.js";
 import { User } from "../models/userModal.js";
 import { moderateContent, transcribeAudio } from "../utils/openaiService.js";
-import { io } from "../app.js";
 
 export const sendMessage = catchAsyncError(async (req, res, next) => {
   const { chatId, recipientId, content } = req.body;
@@ -101,6 +100,7 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
     "name avatar"
   );
 
+  const io = req.app.get("io");
   io.to(chat._id.toString()).emit("new-message", populatedMessage);
 
   res.status(201).json({
@@ -166,6 +166,7 @@ export const deleteMessage = catchAsyncError(async (req, res, next) => {
     deletedBy: req.user._id,
   };
 
+  const io = req.app.get("io");
   io.to(message.chat.toString()).emit("message-deleted", eventData);
 
   res.status(200).json({
@@ -226,6 +227,7 @@ export const markAsRead = catchAsyncError(async (req, res, next) => {
   message.status = "read";
   await message.save();
 
+  const io = req.app.get("io");
   io.to(message.sender.toString()).emit("message-read", messageId);
 
   res.status(200).json({

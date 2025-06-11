@@ -263,10 +263,10 @@ export const forgotPassword = catchAsyncError(async (req, res, next) => {
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }
+
   const resetToken = user.generateResetPasswordToken();
   await user.save({ validateBeforeSave: false });
   const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
-
   const message = `Your Reset Password Token is:- \n\n ${resetPasswordUrl} \n\n If you have not requested this email then please ignore it.`;
 
   try {
@@ -369,32 +369,24 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
       return next(new ErrorHandler("User not found", 404));
     }
 
-    // Update user profile data
     if (name) user.name = name;
     if (bio !== undefined) user.bio = bio;
     if (location !== undefined) user.location = location;
     if (interests !== undefined) {
-      // Convert comma-separated interests to array
       user.interests = interests
         .split(",")
         .map((interest) => interest.trim())
         .filter(Boolean);
     }
 
-    // Handle avatar upload if provided
     if (req.files && req.files.avatar) {
       const file = req.files.avatar;
-
-      // Upload to cloudinary or your file storage service
-      // This is a placeholder for actual file upload logic
       const uploadResult = await uploadFileToStorage(file);
-
       user.avatar = uploadResult.url;
     }
 
     await user.save();
 
-    // Emit socket event for real-time profile update
     if (req.app.get("io")) {
       req.app.get("io").emit("user-profile-updated", {
         userId: user._id,
@@ -417,9 +409,6 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
   }
 });
 
-// Helper function for file upload - implement according to your storage solution
 const uploadFileToStorage = async (file) => {
-  // Placeholder for actual file upload logic
-  // Return an object with url of the uploaded file
-  return { url: file.name }; // Replace with actual implementation
+  return { url: file.name };
 };
