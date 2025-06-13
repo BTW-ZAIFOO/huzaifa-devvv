@@ -15,7 +15,6 @@ import { Server } from "socket.io";
 import fs from "fs";
 import path from "path";
 
-// Change from export const to just const to avoid duplicate export
 const app = express();
 config({ path: "./config.env" });
 
@@ -55,7 +54,6 @@ app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/admin", adminRouter);
 
-// Add a health check endpoint
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -64,10 +62,8 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Make sure the error middleware is applied after all routes
 app.use(errorMiddleware);
 
-// Add a route not found handler
 app.all("*", (req, res, next) => {
   res.status(404).json({
     success: false,
@@ -75,10 +71,8 @@ app.all("*", (req, res, next) => {
   });
 });
 
-// Create HTTP server before Socket.IO
 const server = createServer(app);
 
-// Initialize Socket.IO with the HTTP server
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -90,7 +84,6 @@ const io = new Server(server, {
   transports: ["polling", "websocket"],
 });
 
-// Socket.IO connection handler
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
@@ -124,7 +117,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Make io available globally
 global.io = io;
 
 removeUnverifiedAccounts();
@@ -143,5 +135,4 @@ try {
   console.error("Error syncing avatar files:", err);
 }
 
-// Explicitly export all required objects at the end only
 export { app, server, io };
