@@ -1,7 +1,7 @@
 {
-  "name": "ai-chat-moderation-system",
+  "name": "ai-chat-moderation-server",
   "version": "1.0.0",
-  "description": "AI-powered chat moderation system",
+  "description": "Server for AI Chat Moderation System",
   "main": "server.js",
   "type": "module",
   "scripts": {

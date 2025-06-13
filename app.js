@@ -15,7 +15,8 @@ import { Server } from "socket.io";
 import fs from "fs";
 import path from "path";
 
-export const app = express();
+// Change from export const to just const to avoid duplicate export
+const app = express();
 config({ path: "./config.env" });
 
 app.use(express.json());
@@ -30,14 +31,23 @@ app.use(
 );
 
 app.use("/uploads", express.static("uploads"));
+app.use("/public", express.static("public"));
 
 const uploadsDir = path.join("uploads");
 const postsDir = path.join("uploads", "posts");
 const avatarsDir = path.join("uploads", "avatars");
 
+const publicDir = path.join("public");
+const publicUploadsDir = path.join("public", "uploads");
+const publicAvatarsDir = path.join("public", "uploads", "avatars");
+
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(postsDir)) fs.mkdirSync(postsDir);
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
+
+if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir);
+if (!fs.existsSync(publicUploadsDir)) fs.mkdirSync(publicUploadsDir);
+if (!fs.existsSync(publicAvatarsDir)) fs.mkdirSync(publicAvatarsDir);
 
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/chat", chatRouter);
@@ -45,16 +55,42 @@ app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/admin", adminRouter);
 
+// Add a health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is running",
+    timestamp: new Date(),
+  });
+});
+
+// Make sure the error middleware is applied after all routes
+app.use(errorMiddleware);
+
+// Add a route not found handler
+app.all("*", (req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found on this server`,
+  });
+});
+
+// Create HTTP server before Socket.IO
 const server = createServer(app);
 
-export const io = new Server(server, {
+// Initialize Socket.IO with the HTTP server
+const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST"],
     credentials: true,
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ["polling", "websocket"],
 });
 
+// Socket.IO connection handler
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
@@ -65,38 +101,47 @@ io.on("connection", (socket) => {
 
   socket.on("leave-room", (roomId) => {
     socket.leave(roomId);
-    console.log(`User left room: ${roomId}`);
   });
 
-  socket.on("join-admin-room", () => {
-    socket.join("admin-room");
-    console.log("Admin joined admin-room");
+  socket.on("user-status-change", (data) => {
+    io.emit("user-status-updated", data);
   });
 
-  socket.on("admin-delete-message", ({ messageId, chatId }) => {
-    io.to(chatId).emit("admin-message-deleted", { messageId });
+  socket.on("follow-user", (data) => {
+    io.emit("follow-updated", data);
   });
 
-  socket.on("admin-block-user", ({ userId, notification }) => {
-    io.to(userId).emit("admin-user-blocked", notification);
-  });
-
-  socket.on("admin-ban-user", ({ userId, notification }) => {
-    io.to(userId).emit("admin-user-banned", notification);
-  });
-
-  socket.on("admin-send-notification", ({ userId, notification }) => {
-    io.to(userId).emit("admin-notification", notification);
+  socket.on("post-interaction", (data) => {
+    io.emit("post-interaction-update", data);
   });
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
+
+  socket.on("error", (error) => {
+    console.error("Socket error:", error);
+  });
 });
+
+// Make io available globally
+global.io = io;
 
 removeUnverifiedAccounts();
 connection();
 
-app.use(errorMiddleware);
+try {
+  if (fs.existsSync(avatarsDir)) {
+    fs.readdirSync(avatarsDir).forEach((file) => {
+      fs.copyFileSync(
+        path.join(avatarsDir, file),
+        path.join(publicAvatarsDir, file)
+      );
+    });
+  }
+} catch (err) {
+  console.error("Error syncing avatar files:", err);
+}
 
-export { server };
+// Explicitly export all required objects at the end only
+export { app, server, io };

@@ -1,55 +1,43 @@
 import express from "express";
+import { isAuthenticated } from "../middlewares/auth.js";
 import {
   createPost,
   getPosts,
   getUserPosts,
   likeUnlikePost,
-  addComment,
+  commentOnPost,
+  getTrendingTopics,
   deletePost,
-  reportPost,
+  updatePost,
 } from "../controllers/postController.js";
-import { isAuthenticated } from "../middlewares/auth.js";
-import multer from "multer";
-import path from "path";
+import upload from "../middlewares/multer.js";
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/posts");
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
-  },
-});
+// Get all posts from followed users and own posts
+router.get("/", isAuthenticated, getPosts);
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, 
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif|webp/;
-    const extname = filetypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  },
-});
-
-router.post("/create", isAuthenticated, upload.single("media"), createPost);
+// Get all posts for the feed
 router.get("/all", isAuthenticated, getPosts);
-router.get("/user/:userId", isAuthenticated, getUserPosts);
+
+// Create new post
+router.post("/create", isAuthenticated, upload.single("media"), createPost);
+
+// Like/unlike post routes
 router.post("/:postId/like", isAuthenticated, likeUnlikePost);
-router.post("/:postId/comment", isAuthenticated, addComment);
+router.post("/:postId/unlike", isAuthenticated, likeUnlikePost);
+
+// Comment routes
+router.post("/:postId/comment", isAuthenticated, commentOnPost);
+
+// Get posts by user
+router.get("/user/:userId", isAuthenticated, getUserPosts);
+
+// Get trending topics
+router.get("/trending/topics", isAuthenticated, getTrendingTopics);
+
+// Add routes for updating and deleting posts
+router.put("/:postId", isAuthenticated, upload.single("media"), updatePost);
 router.delete("/:postId", isAuthenticated, deletePost);
-router.post("/:postId/report", isAuthenticated, reportPost);
 
 export default router;

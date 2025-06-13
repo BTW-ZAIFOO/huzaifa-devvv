@@ -331,6 +331,12 @@ export const getGroupChats = catchAsyncError(async (req, res, next) => {
     .populate("lastMessage")
     .sort({ updatedAt: -1 });
 
+  if (global.io && req.user) {
+    global.io
+      .to(req.user._id.toString())
+      .emit("group-chats-updated", groupChats);
+  }
+
   res.status(200).json({
     success: true,
     groupChats,

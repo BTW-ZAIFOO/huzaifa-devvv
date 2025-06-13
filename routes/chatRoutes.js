@@ -1,5 +1,5 @@
 import express from "express";
-import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 import {
   createChat,
   createOrGetChat,

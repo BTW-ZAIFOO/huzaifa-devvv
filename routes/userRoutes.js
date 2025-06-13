@@ -3,12 +3,18 @@ import * as userController from "../controllers/userControllers.js";
 import { isAuthenticated } from "../middlewares/auth.js";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
+const avatarDir = "./public/uploads/avatars";
+if (!fs.existsSync(avatarDir)) {
+  fs.mkdirSync(avatarDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "./public/uploads/avatars");
+    cb(null, avatarDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -47,6 +53,7 @@ router.post("/unfollow/:userId", isAuthenticated, userController.unfollowUser);
 router.get("/followers", isAuthenticated, userController.getFollowers);
 router.get("/following", isAuthenticated, userController.getFollowing);
 router.get("/profile/:userId", isAuthenticated, userController.getUserProfile);
+router.get("/suggested", isAuthenticated, userController.getSuggestedUsers);
 
 router.put(
   "/update",

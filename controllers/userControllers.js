@@ -148,18 +148,21 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     const verificationCodeExpire = new Date(
       user.verificationCodeExpire
     ).getTime();
+
     if (currentTime > verificationCodeExpire) {
-      return next(new ErrorHandler("OTP Expired.", 400));
+      return next(new ErrorHandler("OTP has expired.", 400));
     }
 
     user.accountVerified = true;
-    user.verificationCode = null;
-    user.verificationCodeExpire = null;
-    await user.save({ validateModifiedOnly: true });
+    user.verificationCode = undefined;
+    user.verificationCodeExpire = undefined;
+    await user.save();
 
-    sendToken(user, 200, "Account Verified.", res);
+    const token = user.getJWTToken();
+
+    sendToken(user, token, res, "Account verified successfully.");
   } catch (error) {
-    return next(new ErrorHandler("Internal Server Error.", 500));
+    return next(new ErrorHandler(error.message, 500));
   }
 });
 
@@ -355,6 +358,7 @@ export const getOnlineUsers = catchAsyncError(async (req, res, next) => {
 export const updateProfile = catchAsyncError(async (req, res, next) => {
   try {
     const { name, bio, location, interests } = req.body;
+
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -364,21 +368,20 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
     if (name) user.name = name;
     if (bio !== undefined) user.bio = bio;
     if (location !== undefined) user.location = location;
-    if (interests !== undefined) {
-      user.interests = interests
-        .split(",")
-        .map((interest) => interest.trim())
-        .filter(Boolean);
+    if (interests) {
+      user.interests = Array.isArray(interests)
+        ? interests
+        : interests.split(",").map((item) => item.trim());
     }
 
     if (req.file) {
-      user.avatar = `/uploads/avatars/${req.file.filename}`;
+      user.avatar = req.file.path;
     }
 
     await user.save();
 
-    if (req.app.get("io")) {
-      req.app.get("io").emit("user-profile-updated", {
+    if (io) {
+      io.emit("user-profile-updated", {
         userId: user._id,
         name: user.name,
         bio: user.bio,
@@ -392,134 +395,83 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        bio: user.bio,
+        location: user.location,
+        interests: user.interests,
+      },
     });
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
 });
 
-export const updatePassword = catchAsyncError(async (req, res, next) => {
-  const { oldPassword, newPassword, confirmPassword } = req.body;
-
-  if (!oldPassword || !newPassword || !confirmPassword) {
-    return next(new ErrorHandler("All fields are required", 400));
-  }
-
-  if (newPassword !== confirmPassword) {
-    return next(new ErrorHandler("New passwords do not match", 400));
-  }
-
-  const user = await User.findById(req.user._id).select("+password");
-
-  if (!user) {
-    return next(new ErrorHandler("User not found", 404));
-  }
-
-  const isPasswordMatched = await user.comparePassword(oldPassword);
-
-  if (!isPasswordMatched) {
-    return next(new ErrorHandler("Old password is incorrect", 400));
-  }
-
-  user.password = newPassword;
-  await user.save();
-
-  sendToken(user, 200, res, "Password updated successfully");
-});
-
-const uploadFileToStorage = async (file) => {
-  return { url: file.name };
-};
-
 export const followUser = catchAsyncError(async (req, res, next) => {
   const { userId } = req.params;
-
-  if (userId === req.user._id.toString()) {
-    return next(new ErrorHandler("You cannot follow yourself", 400));
-  }
 
   const userToFollow = await User.findById(userId);
   if (!userToFollow) {
     return next(new ErrorHandler("User not found", 404));
   }
 
-  if (!req.user.following) req.user.following = [];
-  if (!userToFollow.followers) userToFollow.followers = [];
-
-  const isAlreadyFollowing = req.user.following.includes(userId);
-  if (isAlreadyFollowing) {
-    return next(new ErrorHandler("You are already following this user", 400));
+  const currentUser = await User.findById(req.user._id);
+  if (currentUser.following && currentUser.following.includes(userId)) {
+    return next(new ErrorHandler("You already follow this user", 400));
   }
 
-  await User.findByIdAndUpdate(req.user._id, {
-    $push: { following: userId },
-  });
+  await User.findByIdAndUpdate(req.user._id, { $push: { following: userId } });
 
-  await User.findByIdAndUpdate(userId, {
-    $push: { followers: req.user._id },
-  });
+  await User.findByIdAndUpdate(userId, { $push: { followers: req.user._id } });
 
-  try {
-    if (socketRef.current) {
-      socketRef.current.emit("user-followed", {
-        follower: {
-          id: req.user._id,
-          name: req.user.name,
-          avatar: req.user.avatar,
-        },
-        userId,
-      });
-    }
-  } catch (err) {
-    console.error("Socket notification error:", err);
+  if (io) {
+    io.emit("follow-notification", {
+      userId,
+      follower: {
+        _id: req.user._id,
+        name: req.user.name,
+        avatar: req.user.avatar,
+      },
+      timestamp: new Date(),
+    });
   }
 
   res.status(200).json({
     success: true,
-    message: `You are now following ${userToFollow.name}`,
+    message: "User followed successfully",
   });
 });
 
 export const unfollowUser = catchAsyncError(async (req, res, next) => {
   const { userId } = req.params;
 
-  if (userId === req.user._id.toString()) {
-    return next(new ErrorHandler("You cannot unfollow yourself", 400));
-  }
-
   const userToUnfollow = await User.findById(userId);
   if (!userToUnfollow) {
     return next(new ErrorHandler("User not found", 404));
   }
 
-  if (!req.user.following) req.user.following = [];
-
-  const isFollowing = req.user.following.includes(userId);
-  if (!isFollowing) {
-    return next(new ErrorHandler("You are not following this user", 400));
+  const currentUser = await User.findById(req.user._id);
+  if (!currentUser.following || !currentUser.following.includes(userId)) {
+    return next(new ErrorHandler("You don't follow this user", 400));
   }
 
-  await User.findByIdAndUpdate(req.user._id, {
-    $pull: { following: userId },
-  });
+  await User.findByIdAndUpdate(req.user._id, { $pull: { following: userId } });
 
-  await User.findByIdAndUpdate(userId, {
-    $pull: { followers: req.user._id },
-  });
+  await User.findByIdAndUpdate(userId, { $pull: { followers: req.user._id } });
 
   res.status(200).json({
     success: true,
-    message: `You have unfollowed ${userToUnfollow.name}`,
+    message: "User unfollowed successfully",
   });
 });
 
 export const getFollowers = catchAsyncError(async (req, res, next) => {
-  const userId = req.query.userId || req.user._id;
-
-  const user = await User.findById(userId).populate(
+  const user = await User.findById(req.user._id).populate(
     "followers",
-    "name email avatar bio status"
+    "name email avatar status lastSeen bio"
   );
 
   if (!user) {
@@ -533,11 +485,9 @@ export const getFollowers = catchAsyncError(async (req, res, next) => {
 });
 
 export const getFollowing = catchAsyncError(async (req, res, next) => {
-  const userId = req.query.userId || req.user._id;
-
-  const user = await User.findById(userId).populate(
+  const user = await User.findById(req.user._id).populate(
     "following",
-    "name email avatar bio status"
+    "name email avatar status lastSeen bio"
   );
 
   if (!user) {
@@ -550,25 +500,63 @@ export const getFollowing = catchAsyncError(async (req, res, next) => {
   });
 });
 
+export const getSuggestedUsers = catchAsyncError(async (req, res, next) => {
+  const currentUser = await User.findById(req.user._id);
+  if (!currentUser) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  const following = currentUser.following || [];
+
+  const suggestedUsers = await User.find({
+    _id: { $nin: [...following, req.user._id] },
+    accountVerified: true,
+  })
+    .select("name email avatar bio status lastSeen")
+    .limit(5);
+
+  res.status(200).json({
+    success: true,
+    users: suggestedUsers,
+  });
+});
+
 export const getUserProfile = catchAsyncError(async (req, res, next) => {
   const { userId } = req.params;
 
-  const user = await User.findById(userId)
-    .select(
-      "name email avatar bio location interests followers following status lastSeen createdAt"
-    )
-    .populate("followers", "name avatar")
-    .populate("following", "name avatar");
+  const user = await User.findById(userId).select(
+    "-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire"
+  );
 
   if (!user) {
     return next(new ErrorHandler("User not found", 404));
   }
 
-  const isFollowing = req.user.following && req.user.following.includes(userId);
-
   res.status(200).json({
     success: true,
     user,
-    isFollowing,
   });
+});
+
+export const updatePassword = catchAsyncError(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return next(
+      new ErrorHandler("Please provide current and new password", 400)
+    );
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  const isPasswordMatched = await user.comparePassword(currentPassword);
+
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Current password is incorrect", 400));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  sendToken(user, 200, "Password updated successfully", res);
 });
