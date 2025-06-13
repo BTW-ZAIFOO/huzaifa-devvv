@@ -2,19 +2,10 @@ import { config } from "dotenv";
 config();
 
 export const moderateContent = async (content) => {
-  const inappropriate = /\b(fuck|shit|ass|bitch|cunt|dick|porn|sex)\b/i;
-
-  let result = {
+  const result = {
     flagged: false,
     categories: {},
-    reason: null,
   };
-
-  if (inappropriate.test(content)) {
-    result.flagged = true;
-    result.categories.profanity = true;
-    result.reason = "Contains inappropriate language";
-  }
 
   if (process.env.OPENAI_API_KEY) {
     try {
