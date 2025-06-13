@@ -1,28 +1,66 @@
+import multer from "multer";
+import path from "path";
 import fs from "fs";
 
-export const ensureDirectoriesExist = () => {
-  const directories = [
-    "./uploads",
-    "./uploads/posts",
-    "./uploads/avatars",
-    "./public",
-    "./public/uploads",
-    "./public/uploads/avatars",
-  ];
+const avatarDir = "./public/uploads/avatars";
+const postDir = "./public/uploads/posts";
 
-  for (const dir of directories) {
-    if (!fs.existsSync(dir)) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-        console.log(`Created directory: ${dir}`);
-      } catch (error) {
-        console.error(`Error creating directory ${dir}:`, error);
-      }
-    }
+if (!fs.existsSync(avatarDir)) {
+  fs.mkdirSync(avatarDir, { recursive: true });
+}
+
+if (!fs.existsSync(postDir)) {
+  fs.mkdirSync(postDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, avatarDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "avatar-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const postStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, postDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "post-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const imageFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only images are allowed!"), false);
   }
 };
 
-export const createUploadMiddleware = (req, res, next) => {
-  ensureDirectoriesExist();
-  next();
+const mediaFileFilter = (req, file, cb) => {
+  if (
+    file.mimetype.startsWith("image") ||
+    file.mimetype.startsWith("video") ||
+    file.mimetype.startsWith("audio")
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported file type!"), false);
+  }
 };
+
+export const uploadAvatar = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 1 * 1024 * 1024 },
+  fileFilter: imageFileFilter,
+});
+
+export const uploadPostMedia = multer({
+  storage: postStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: mediaFileFilter,
+});

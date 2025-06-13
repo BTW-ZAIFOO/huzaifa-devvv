@@ -5,6 +5,7 @@ import { sendEmail } from "../utilis/sendEmail.js";
 import twilio from "twilio";
 import { sendToken } from "../utilis/sendToken.js";
 import crypto from "crypto";
+import fs from "fs";
 
 const client = twilio(
   "ACe1de83735fa6aaaa6ebd63ac05e14154",
@@ -212,6 +213,18 @@ export const logout = catchAsyncError(async (req, res, next) => {
     });
 });
 
+export const getMyProfile = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
 export const updateUserStatus = catchAsyncError(async (req, res, next) => {
   const { status } = req.body;
 
@@ -375,13 +388,20 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
     }
 
     if (req.file) {
-      user.avatar = req.file.path;
+      if (user.avatar && user.avatar.startsWith("./public")) {
+        try {
+          fs.unlinkSync(user.avatar);
+        } catch (err) {
+          console.log("Error deleting old avatar:", err);
+        }
+      }
+      user.avatar = `/public/uploads/avatars/${req.file.filename}`;
     }
 
     await user.save();
 
-    if (io) {
-      io.emit("user-profile-updated", {
+    if (global.io) {
+      global.io.emit("user-profile-updated", {
         userId: user._id,
         name: user.name,
         bio: user.bio,

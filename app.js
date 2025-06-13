@@ -39,6 +39,7 @@ const avatarsDir = path.join("uploads", "avatars");
 const publicDir = path.join("public");
 const publicUploadsDir = path.join("public", "uploads");
 const publicAvatarsDir = path.join("public", "uploads", "avatars");
+const publicPostsDir = path.join("public", "uploads", "posts");
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(postsDir)) fs.mkdirSync(postsDir);
@@ -47,6 +48,7 @@ if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
 if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir);
 if (!fs.existsSync(publicUploadsDir)) fs.mkdirSync(publicUploadsDir);
 if (!fs.existsSync(publicAvatarsDir)) fs.mkdirSync(publicAvatarsDir);
+if (!fs.existsSync(publicPostsDir)) fs.mkdirSync(publicPostsDir);
 
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/chat", chatRouter);
