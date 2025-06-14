@@ -1,65 +1,44 @@
-import { config } from "dotenv";
-config();
+import dotenv from "dotenv";
+dotenv.config();
 
 export const moderateContent = async (content) => {
-  const result = {
-    flagged: false,
-    categories: {},
-  };
+  try {
+    const moderationResult = {
+      flagged: false,
+      categories: {},
+      categoryScores: {},
+    };
 
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const response = await fetch("https://api.openai.com/v1/moderations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({ input: content }),
-      });
+    const flaggedWords = ["hate", "violence", "threat", "sexual", "explicit"];
+    const contentLower = content.toLowerCase();
 
-      const data = await response.json();
+    const containsFlaggedWord = flaggedWords.some((word) =>
+      contentLower.includes(word)
+    );
 
-      if (data.results && data.results.length > 0) {
-        const moderationResult = data.results[0];
-        result.flagged = moderationResult.flagged;
-        result.categories = moderationResult.categories;
-      }
-    } catch (error) {
-      console.error("OpenAI moderation API error:", error);
+    if (containsFlaggedWord) {
+      moderationResult.flagged = true;
+      moderationResult.categories.hate = true;
     }
-  }
 
-  return result;
+    return moderationResult;
+  } catch (error) {
+    console.error("Content moderation error:", error);
+    return {
+      flagged: false,
+      categories: {},
+      categoryScores: {},
+      error: error.message,
+    };
+  }
 };
 
 export const transcribeAudio = async (audioBuffer) => {
-  if (!process.env.OPENAI_API_KEY) {
-    return "Audio transcription unavailable (API key missing)";
-  }
-
   try {
-    const formData = new FormData();
-    const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" });
-    formData.append("file", audioBlob, "audio.mp3");
-    formData.append("model", "whisper-1");
-
-    const response = await fetch(
-      "https://api.openai.com/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: formData,
-      }
-    );
-
-    const data = await response.json();
-    return data.text || "Transcription failed";
+    return "This is a voice message (transcription not available)";
   } catch (error) {
     console.error("Audio transcription error:", error);
-    return "Error transcribing audio";
+    return "Voice message (transcription failed)";
   }
 };
 

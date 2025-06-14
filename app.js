@@ -110,6 +110,20 @@ io.on("connection", (socket) => {
     io.emit("post-interaction-update", data);
   });
 
+  socket.on("new-message", (data) => {
+    const { chatId, message } = data;
+    if (chatId) {
+      socket.to(chatId).emit("new-message", message);
+    }
+  });
+
+  socket.on("message-read", (data) => {
+    const { chatId, messageId, userId } = data;
+    if (chatId) {
+      socket.to(chatId).emit("message-read", { messageId, userId });
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });

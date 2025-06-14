@@ -6,109 +6,124 @@ import { User } from "../models/userModal.js";
 import { moderateContent, transcribeAudio } from "../utils/openaiService.js";
 
 export const sendMessage = catchAsyncError(async (req, res, next) => {
-  const { chatId, recipientId, content } = req.body;
-  const isVoiceMessage = req.file ? true : false;
+  try {
+    const { chatId, recipientId, content } = req.body;
+    const isVoiceMessage = req.file ? true : false;
 
-  if ((!chatId && !recipientId) || (!content && !req.file)) {
-    return next(
-      new ErrorHandler(
-        "Chat ID or recipient ID is required, along with content or voice message",
-        400
-      )
-    );
-  }
-
-  let chat;
-
-  if (chatId) {
-    chat = await Chat.findById(chatId);
-    if (!chat) {
-      return next(new ErrorHandler("Chat not found", 404));
-    }
-
-    if (
-      !chat.participants
-        .map((id) => id.toString())
-        .includes(req.user._id.toString())
-    ) {
+    if ((!chatId && !recipientId) || (!content && !req.file)) {
       return next(
-        new ErrorHandler("You are not a participant of this chat", 403)
+        new ErrorHandler(
+          "Chat ID or recipient ID is required, along with content or voice message",
+          400
+        )
       );
     }
 
-    if (chat.isBlocked) {
-      return next(new ErrorHandler("This chat has been blocked", 403));
-    }
-  } else {
-    const recipient = await User.findById(recipientId);
-    if (!recipient) {
-      return next(new ErrorHandler("Recipient not found", 404));
-    }
+    let chat;
 
-    chat = await Chat.findOne({
-      participants: { $all: [req.user._id, recipientId] },
-      isGroupChat: false,
-    });
+    if (chatId) {
+      chat = await Chat.findById(chatId);
+      if (!chat) {
+        return next(new ErrorHandler("Chat not found", 404));
+      }
 
-    if (!chat) {
-      chat = await Chat.create({
-        participants: [req.user._id, recipientId],
+      if (
+        !chat.participants
+          .map((id) => id.toString())
+          .includes(req.user._id.toString())
+      ) {
+        return next(
+          new ErrorHandler("You are not a participant of this chat", 403)
+        );
+      }
+
+      if (chat.isBlocked) {
+        return next(new ErrorHandler("This chat has been blocked", 403));
+      }
+    } else {
+      const recipient = await User.findById(recipientId);
+      if (!recipient) {
+        return next(new ErrorHandler("Recipient not found", 404));
+      }
+
+      chat = await Chat.findOne({
+        participants: { $all: [req.user._id, recipientId] },
         isGroupChat: false,
       });
+
+      if (!chat) {
+        chat = await Chat.create({
+          participants: [req.user._id, recipientId],
+          isGroupChat: false,
+        });
+      }
     }
-  }
 
-  let messageContent = content;
-  let voiceTranscription = null;
-  let moderationResult = { flagged: false };
+    let messageContent = content;
+    let voiceTranscription = null;
+    let moderationResult = { flagged: false };
 
-  if (isVoiceMessage) {
-    voiceTranscription = await transcribeAudio(req.file.buffer);
-    messageContent = voiceTranscription;
+    if (isVoiceMessage) {
+      try {
+        voiceTranscription = await transcribeAudio(req.file.buffer);
+        messageContent = voiceTranscription;
+        moderationResult = await moderateContent(voiceTranscription);
+      } catch (error) {
+        console.error("Error processing voice message:", error);
+        messageContent = "Voice message (transcription failed)";
+      }
+    } else {
+      try {
+        moderationResult = await moderateContent(content);
+      } catch (error) {
+        console.error("Error moderating content:", error);
+      }
+    }
 
-    moderationResult = await moderateContent(voiceTranscription);
-  } else {
-    moderationResult = await moderateContent(content);
-  }
+    let recipientUser = null;
+    if (!chat.isGroupChat) {
+      const otherParticipant = chat.participants.find(
+        (id) => id.toString() !== req.user._id.toString()
+      );
+      if (otherParticipant) {
+        recipientUser = otherParticipant;
+      }
+    }
 
-  let recipientUser = null;
+    const message = await Message.create({
+      chat: chat._id,
+      sender: req.user._id,
+      recipient: recipientUser,
+      content: messageContent,
+      isVoice: isVoiceMessage,
+      voiceTranscription,
+      moderationResult,
+    });
 
-  if (!chat.isGroupChat) {
-    recipientUser = chat.participants.find(
-      (id) => id.toString() !== req.user._id.toString()
+    chat.lastMessage = message._id;
+    await chat.save();
+
+    const populatedMessage = await Message.findById(message._id)
+      .populate("sender", "name avatar")
+      .populate("recipient", "name avatar");
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(chat._id.toString()).emit("new-message", populatedMessage);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: populatedMessage,
+      moderationResult,
+      chatId: chat._id,
+    });
+  } catch (error) {
+    console.error("Send message error:", error);
+    return next(
+      new ErrorHandler(error.message || "Failed to send message", 500)
     );
-    if (!recipientUser) {
-      recipientUser = req.user._id;
-    }
   }
-
-  const message = await Message.create({
-    chat: chat._id,
-    sender: req.user._id,
-    recipient: recipientUser,
-    content: messageContent,
-    isVoice: isVoiceMessage,
-    voiceTranscription,
-    moderationResult,
-  });
-
-  chat.lastMessage = message._id;
-  await chat.save();
-
-  const populatedMessage = await Message.findById(message._id).populate(
-    "sender",
-    "name avatar"
-  );
-
-  const io = req.app.get("io");
-  io.to(chat._id.toString()).emit("new-message", populatedMessage);
-
-  res.status(201).json({
-    success: true,
-    message: populatedMessage,
-    moderationResult,
-    chatId: chat._id,
-  });
 });
 
 export const getMessages = catchAsyncError(async (req, res, next) => {

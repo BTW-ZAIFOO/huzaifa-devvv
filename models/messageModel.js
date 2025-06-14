@@ -55,6 +55,11 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   { timestamps: true }
 );
