@@ -106,6 +106,16 @@ io.on("connection", (socket) => {
     io.emit("follow-updated", data);
   });
 
+  socket.on("user-profile-view", (data) => {
+    if (data.userId) {
+      io.to(data.userId).emit("profile-viewed", {
+        viewerId: data.viewerId,
+        viewerName: data.viewerName,
+        timestamp: new Date(),
+      });
+    }
+  });
+
   socket.on("post-interaction", (data) => {
     io.emit("post-interaction-update", data);
   });
