@@ -154,7 +154,6 @@ export const commentOnPost = catchAsyncError(async (req, res, next) => {
   post.comments.push(comment);
   await post.save();
 
-  // Populate the user details for the new comment
   const populatedPost = await Post.findById(postId).populate({
     path: "comments.user",
     select: "name avatar",
@@ -313,7 +312,7 @@ export const getTrendingPosts = catchAsyncError(async (req, res, next) => {
         interactionScore: {
           $add: [
             { $size: { $ifNull: ["$likes", []] } },
-            { $multiply: [{ $size: { $ifNull: ["$comments", []] } }, 2] }, // Comments weighted more
+            { $multiply: [{ $size: { $ifNull: ["$comments", []] } }, 2] },
           ],
         },
       },
@@ -370,7 +369,7 @@ export const getTrendingTopics = catchAsyncError(async (req, res, next) => {
       const matches = post.content.match(hashtagRegex);
       if (matches) {
         matches.forEach((tag) => {
-          const cleanTag = tag.substring(1).toLowerCase(); // Remove # and lowercase
+          const cleanTag = tag.substring(1).toLowerCase();
           hashtags[cleanTag] = (hashtags[cleanTag] || 0) + 1;
         });
       }

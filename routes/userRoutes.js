@@ -25,7 +25,7 @@ router.get("/following", isAuthenticated, userController.getFollowing);
 router.post("/follow/:userId", isAuthenticated, userController.followUser);
 router.post("/unfollow/:userId", isAuthenticated, userController.unfollowUser);
 router.get("/profile/:userId", isAuthenticated, userController.getUserProfile);
-router.post("/status", isAuthenticated, userController.updateUserStatus); // Using the correct method name
+router.post("/status", isAuthenticated, userController.updateUserStatus);
 
 router.get("/online", isAuthenticated, userController.getOnlineUsers);
 
