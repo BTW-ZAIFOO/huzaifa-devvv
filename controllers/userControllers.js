@@ -1,6 +1,7 @@
 import ErrorHandler from "../middlewares/error.js";
 import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import { User } from "../models/userModal.js";
+import { Post } from "../models/postModel.js";
 import { sendEmail } from "../utilis/sendEmail.js";
 import twilio from "twilio";
 import { sendToken } from "../utilis/sendToken.js";
@@ -579,4 +580,24 @@ export const updatePassword = catchAsyncError(async (req, res, next) => {
   await user.save();
 
   sendToken(user, 200, "Password updated successfully", res);
+});
+
+export const globalSearch = catchAsyncError(async (req, res, next) => {
+  const { q } = req.query;
+  if (!q || q.trim() === "") {
+    return res.status(200).json({ success: true, users: [], posts: [] });
+  }
+  const users = await User.find({
+    name: { $regex: q, $options: "i" },
+    accountVerified: true,
+  }).select("name email avatar bio _id");
+  const posts = await Post.find({
+    $or: [
+      { content: { $regex: q, $options: "i" } },
+      { tags: { $regex: q, $options: "i" } },
+    ],
+  })
+    .populate("author", "name avatar")
+    .select("content author _id");
+  res.status(200).json({ success: true, users, posts });
 });

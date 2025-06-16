@@ -156,7 +156,17 @@ export const getMessages = catchAsyncError(async (req, res, next) => {
 
 export const deleteMessage = catchAsyncError(async (req, res, next) => {
   const { messageId } = req.params;
-  const { permanent } = req.body || {};
+  let permanent = false;
+  if (typeof req.body?.permanent !== "undefined") {
+    permanent =
+      req.body.permanent === true ||
+      req.body.permanent === "true" ||
+      req.body.permanent === 1 ||
+      req.body.permanent === "1";
+  } else if (typeof req.query?.permanent !== "undefined") {
+    const val = String(req.query.permanent).toLowerCase();
+    permanent = val === "true" || val === "1";
+  }
 
   const message = await Message.findById(messageId);
   if (!message) {
@@ -182,7 +192,9 @@ export const deleteMessage = catchAsyncError(async (req, res, next) => {
   };
 
   const io = req.app.get("io");
-  io.to(message.chat.toString()).emit("message-deleted", eventData);
+  if (io) {
+    io.to(message.chat.toString()).emit("message-deleted", eventData);
+  }
 
   res.status(200).json({
     success: true,

@@ -9,6 +9,7 @@ import {
   getTrendingTopics,
   deletePost,
   updatePost,
+  searchPosts,
 } from "../controllers/postController.js";
 import upload from "../middlewares/multer.js";
 
@@ -24,5 +25,6 @@ router.get("/user/:userId", isAuthenticated, getUserPosts);
 router.get("/trending/topics", isAuthenticated, getTrendingTopics);
 router.put("/:postId", isAuthenticated, upload.single("media"), updatePost);
 router.delete("/:postId", isAuthenticated, deletePost);
+router.get("/search", isAuthenticated, searchPosts);
 
 export default router;

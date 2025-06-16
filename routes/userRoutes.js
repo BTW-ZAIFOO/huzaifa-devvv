@@ -2,6 +2,7 @@ import express from "express";
 import * as userController from "../controllers/userControllers.js";
 import { isAuthenticated } from "../middlewares/auth.js";
 import { uploadAvatar } from "../middlewares/fileUpload.js";
+import { globalSearch } from "../controllers/userControllers.js";
 
 const router = express.Router();
 
@@ -28,5 +29,7 @@ router.get("/profile/:userId", isAuthenticated, userController.getUserProfile);
 router.post("/status", isAuthenticated, userController.updateUserStatus);
 
 router.get("/online", isAuthenticated, userController.getOnlineUsers);
+router.get("/search/all", isAuthenticated, globalSearch);
+router.get("/search", isAuthenticated, userController.searchUsers);
 
 export default router;

@@ -9,6 +9,7 @@ import chatRouter from "./routes/chatRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import postRouter from "./routes/postRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
+import searchRouter from "./routes/searchRoutes.js";
 import { removeUnverifiedAccounts } from "./automation/removeUnverifiedAccounts.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -55,6 +56,7 @@ app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/search", searchRouter);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
