@@ -18,7 +18,18 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "post-" + uniqueSuffix + path.extname(file.originalname));
+    const filename = "post-" + uniqueSuffix + path.extname(file.originalname);
+    cb(null, filename);
+
+    const destPath = path.join("./public/uploads/posts", filename);
+    const srcPath = path.join(postsDir, filename);
+    setTimeout(() => {
+      if (fs.existsSync(srcPath)) {
+        fs.copyFile(srcPath, destPath, (err) => {
+          if (err) console.error("Failed to copy post media to public:", err);
+        });
+      }
+    }, 100);
   },
 });
 

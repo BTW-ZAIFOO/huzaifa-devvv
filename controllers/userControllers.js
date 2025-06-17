@@ -431,7 +431,6 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        // Send the avatar path as is; frontend will prepend server URL if needed
         avatar: user.avatar,
         bio: user.bio,
         location: user.location,

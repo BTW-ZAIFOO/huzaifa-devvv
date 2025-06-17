@@ -12,6 +12,7 @@ import {
   addToGroupChat,
   removeFromGroupChat,
   getGroupChats,
+  getGroupChatById,
 } from "../controllers/chatController.js";
 
 const router = express.Router();
@@ -28,5 +29,6 @@ router.put("/group/rename", isAuthenticated, renameGroupChat);
 router.put("/group/add", isAuthenticated, addToGroupChat);
 router.put("/group/remove", isAuthenticated, removeFromGroupChat);
 router.get("/group/list", isAuthenticated, getGroupChats);
+router.get("/group/:chatId", isAuthenticated, getGroupChatById);
 
 export default router;

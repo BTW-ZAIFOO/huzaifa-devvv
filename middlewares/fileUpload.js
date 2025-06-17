@@ -19,7 +19,18 @@ const avatarStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "avatar-" + uniqueSuffix + path.extname(file.originalname));
+    const filename = "avatar-" + uniqueSuffix + path.extname(file.originalname);
+    cb(null, filename);
+
+    const destPath = path.join("./public/uploads/avatars", filename);
+    const srcPath = path.join(avatarDir, filename);
+    setTimeout(() => {
+      if (fs.existsSync(srcPath)) {
+        fs.copyFile(srcPath, destPath, (err) => {
+          if (err) console.error("Failed to copy avatar to public:", err);
+        });
+      }
+    }, 100);
   },
 });
 

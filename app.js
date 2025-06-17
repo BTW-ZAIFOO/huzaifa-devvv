@@ -32,6 +32,11 @@ app.use(
 
 app.use("/uploads", express.static("uploads"));
 app.use("/public", express.static("public"));
+app.use("/public/uploads", express.static(path.join("public", "uploads")));
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok", message: "Server is healthy" });
+});
 
 const uploadsDir = path.join("uploads");
 const postsDir = path.join("uploads", "posts");
@@ -153,10 +158,11 @@ connection();
 try {
   if (fs.existsSync(avatarsDir)) {
     fs.readdirSync(avatarsDir).forEach((file) => {
-      fs.copyFileSync(
-        path.join(avatarsDir, file),
-        path.join(publicAvatarsDir, file)
-      );
+      const src = path.join(avatarsDir, file);
+      const dest = path.join(publicAvatarsDir, file);
+      if (!fs.existsSync(dest)) {
+        fs.copyFileSync(src, dest);
+      }
     });
   }
 } catch (err) {

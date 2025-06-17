@@ -341,3 +341,23 @@ export const getGroupChats = catchAsyncError(async (req, res, next) => {
     groupChats,
   });
 });
+
+export const getGroupChatById = catchAsyncError(async (req, res, next) => {
+  const { chatId } = req.params;
+
+  const chat = await Chat.findById(chatId)
+    .populate("participants", "name email avatar status lastSeen")
+    .populate("groupAdmin", "name email avatar")
+    .populate("lastMessage");
+
+  if (!chat) return next(new ErrorHandler("Group chat not found", 404));
+  if (!chat.isGroupChat)
+    return next(new ErrorHandler("This is not a group chat", 400));
+
+  if (
+    !chat.participants.some((p) => p._id.toString() === req.user._id.toString())
+  )
+    return next(new ErrorHandler("Access denied", 403));
+
+  res.status(200).json({ success: true, group: chat });
+});
