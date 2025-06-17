@@ -1,7 +1,6 @@
 import express from "express";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
 import multer from "multer";
-
 import {
   sendMessage,
   getMessages,

@@ -23,7 +23,6 @@ router.get("/user", isAuthenticated, getUserChats);
 router.get("/:chatId", isAuthenticated, getChatById);
 router.put("/block/:chatId", isAuthenticated, blockUnblockChat);
 router.get("/", isAuthenticated, getAllChats);
-
 router.post("/group", isAuthenticated, createGroupChat);
 router.put("/group/rename", isAuthenticated, renameGroupChat);
 router.put("/group/add", isAuthenticated, addToGroupChat);

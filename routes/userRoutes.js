@@ -9,9 +9,7 @@ const router = express.Router();
 router.post("/register", userController.register);
 router.post("/login", userController.login);
 router.post("/logout", userController.logout);
-
 router.get("/me", isAuthenticated, userController.getMyProfile);
-
 router.put(
   "/update",
   isAuthenticated,
@@ -19,7 +17,6 @@ router.put(
   userController.updateProfile
 );
 router.put("/update-password", isAuthenticated, userController.updatePassword);
-
 router.get("/all", isAuthenticated, userController.getAllUsers);
 router.get("/followers", isAuthenticated, userController.getFollowers);
 router.get("/following", isAuthenticated, userController.getFollowing);
@@ -27,7 +24,6 @@ router.post("/follow/:userId", isAuthenticated, userController.followUser);
 router.post("/unfollow/:userId", isAuthenticated, userController.unfollowUser);
 router.get("/profile/:userId", isAuthenticated, userController.getUserProfile);
 router.post("/status", isAuthenticated, userController.updateUserStatus);
-
 router.get("/online", isAuthenticated, userController.getOnlineUsers);
 router.get("/search/all", isAuthenticated, globalSearch);
 router.get("/search", isAuthenticated, userController.searchUsers);

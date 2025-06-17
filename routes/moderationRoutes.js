@@ -1,6 +1,5 @@
 import express from "express";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.js";
-
 import {
   getReportedMessages,
   getReportedUsers,
