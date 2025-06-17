@@ -389,14 +389,25 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
     }
 
     if (req.file) {
-      if (user.avatar && user.avatar.startsWith("./public")) {
+      if (
+        user.avatar &&
+        !user.avatar.startsWith("http") &&
+        !user.avatar.startsWith("data:")
+      ) {
         try {
-          fs.unlinkSync(user.avatar);
+          const oldAvatarPath = user.avatar.startsWith("uploads/")
+            ? `./public/${user.avatar}`
+            : user.avatar.startsWith("./public/")
+            ? user.avatar
+            : `./public/uploads/avatars/${user.avatar}`;
+          if (fs.existsSync(oldAvatarPath)) {
+            fs.unlinkSync(oldAvatarPath);
+          }
         } catch (err) {
           console.log("Error deleting old avatar:", err);
         }
       }
-      user.avatar = `/public/uploads/avatars/${req.file.filename}`;
+      user.avatar = `uploads/avatars/${req.file.filename}`;
     }
 
     await user.save();
@@ -420,6 +431,7 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        // Send the avatar path as is; frontend will prepend server URL if needed
         avatar: user.avatar,
         bio: user.bio,
         location: user.location,
