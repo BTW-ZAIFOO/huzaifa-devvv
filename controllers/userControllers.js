@@ -6,7 +6,6 @@ import { sendEmail } from "../utilis/sendEmail.js";
 import twilio from "twilio";
 import { sendToken } from "../utilis/sendToken.js";
 import crypto from "crypto";
-import fs from "fs";
 
 const client = twilio(
   "ACe1de83735fa6aaaa6ebd63ac05e14154",
@@ -434,7 +433,6 @@ export const followUser = catchAsyncError(async (req, res, next) => {
   }
 
   await User.findByIdAndUpdate(req.user._id, { $push: { following: userId } });
-
   await User.findByIdAndUpdate(userId, { $push: { followers: req.user._id } });
 
   if (io) {
@@ -469,7 +467,6 @@ export const unfollowUser = catchAsyncError(async (req, res, next) => {
   }
 
   await User.findByIdAndUpdate(req.user._id, { $pull: { following: userId } });
-
   await User.findByIdAndUpdate(userId, { $pull: { followers: req.user._id } });
 
   res.status(200).json({
@@ -558,7 +555,6 @@ export const updatePassword = catchAsyncError(async (req, res, next) => {
   }
 
   const user = await User.findById(req.user._id).select("+password");
-
   const isPasswordMatched = await user.comparePassword(currentPassword);
 
   if (!isPasswordMatched) {

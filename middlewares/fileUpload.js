@@ -49,6 +49,6 @@ export const uploadPostMedia = multer({
 
 export const uploadAvatar = multer({
   storage: avatarStorage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit for avatars
+  limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: avatarFileFilter,
 });
