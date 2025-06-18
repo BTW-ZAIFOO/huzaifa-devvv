@@ -54,9 +54,16 @@ export const getPosts = catchAsyncError(async (req, res, next) => {
 
     const total = await Post.countDocuments({ user: { $in: users } });
 
+    const postsWithAuthor = posts.map((post) => {
+      const obj = post.toObject();
+      obj.author = obj.user;
+      delete obj.user;
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      posts,
+      posts: postsWithAuthor,
       totalPages: Math.ceil(total / limit),
       currentPage: parseInt(page),
     });
@@ -82,9 +89,17 @@ export const getUserPosts = catchAsyncError(async (req, res, next) => {
 
   const total = await Post.countDocuments({ user: userId });
 
+  // Map user to author for each post
+  const postsWithAuthor = posts.map((post) => {
+    const obj = post.toObject();
+    obj.author = obj.user;
+    delete obj.user;
+    return obj;
+  });
+
   res.status(200).json({
     success: true,
-    posts,
+    posts: postsWithAuthor,
     totalPages: Math.ceil(total / limit),
     currentPage: page,
   });
@@ -157,10 +172,13 @@ export const commentOnPost = catchAsyncError(async (req, res, next) => {
   const populatedPost = await Post.findById(postId).populate({
     path: "comments.user",
     select: "name avatar",
-    match: { _id: req.user._id },
   });
 
   const newComment = populatedPost.comments[populatedPost.comments.length - 1];
+
+  if (newComment && newComment.user) {
+    newComment.author = newComment.user;
+  }
 
   if (post.user.toString() !== req.user._id.toString() && global.io) {
     global.io.emit("post-commented", {
