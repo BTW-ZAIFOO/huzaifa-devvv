@@ -23,7 +23,6 @@ const mediaFileFilter = (req, file, cb) => {
   }
 };
 
-// Avatar storage and filter
 const avatarStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, avatarDir);
