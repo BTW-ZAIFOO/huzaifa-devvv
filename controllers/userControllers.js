@@ -388,28 +388,6 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         : interests.split(",").map((item) => item.trim());
     }
 
-    if (req.file) {
-      if (
-        user.avatar &&
-        !user.avatar.startsWith("http") &&
-        !user.avatar.startsWith("data:")
-      ) {
-        try {
-          const oldAvatarPath = user.avatar.startsWith("uploads/")
-            ? `./public/${user.avatar}`
-            : user.avatar.startsWith("./public/")
-            ? user.avatar
-            : `./public/uploads/avatars/${user.avatar}`;
-          if (fs.existsSync(oldAvatarPath)) {
-            fs.unlinkSync(oldAvatarPath);
-          }
-        } catch (err) {
-          console.log("Error deleting old avatar:", err);
-        }
-      }
-      user.avatar = `uploads/avatars/${req.file.filename}`;
-    }
-
     await user.save();
 
     if (global.io) {
@@ -419,7 +397,7 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         bio: user.bio,
         location: user.location,
         interests: user.interests,
-        avatar: user.avatar,
+        avatar: null,
         updatedAt: new Date(),
       });
     }
@@ -431,7 +409,7 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        avatar: user.avatar,
+        avatar: null,
         bio: user.bio,
         location: user.location,
         interests: user.interests,
