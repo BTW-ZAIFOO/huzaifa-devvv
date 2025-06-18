@@ -110,6 +110,7 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
     const io = req.app.get("io");
     if (io) {
       io.to(chat._id.toString()).emit("new-message", populatedMessage);
+      io.to("admin-room").emit("admin-message-monitor", populatedMessage);
     }
 
     res.status(201).json({

@@ -93,6 +93,8 @@ const io = new Server(server, {
   transports: ["polling", "websocket"],
 });
 
+app.set("io", io);
+
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
@@ -103,6 +105,11 @@ io.on("connection", (socket) => {
 
   socket.on("leave-room", (roomId) => {
     socket.leave(roomId);
+  });
+
+  socket.on("join-admin-room", () => {
+    socket.join("admin-room");
+    console.log(`Admin joined admin-room: ${socket.id}`);
   });
 
   socket.on("user-status-change", (data) => {
@@ -132,6 +139,7 @@ io.on("connection", (socket) => {
     if (chatId) {
       socket.to(chatId).emit("new-message", message);
     }
+    io.to("admin-room").emit("new-message", message);
   });
 
   socket.on("message-read", (data) => {
