@@ -89,7 +89,6 @@ export const getUserPosts = catchAsyncError(async (req, res, next) => {
 
   const total = await Post.countDocuments({ user: userId });
 
-  // Map user to author for each post
   const postsWithAuthor = posts.map((post) => {
     const obj = post.toObject();
     obj.author = obj.user;
