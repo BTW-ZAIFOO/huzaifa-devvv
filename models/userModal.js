@@ -98,7 +98,7 @@ userSchema.methods.generateVerificationCode = function () {
   const verificationCode = generateRandomFiveDigitNumber();
 
   this.verificationCode = verificationCode;
-  this.verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  this.verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
   return verificationCode;
 };
