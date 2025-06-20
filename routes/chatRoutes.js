@@ -13,6 +13,7 @@ import {
   removeFromGroupChat,
   getGroupChats,
   getGroupChatById,
+  addMultipleUsersToGroup,
 } from "../controllers/chatController.js";
 
 const router = express.Router();
@@ -29,5 +30,10 @@ router.put("/group/add", isAuthenticated, addToGroupChat);
 router.put("/group/remove", isAuthenticated, removeFromGroupChat);
 router.get("/group/list", isAuthenticated, getGroupChats);
 router.get("/group/:chatId", isAuthenticated, getGroupChatById);
+router.put(
+  "/group/add-multiple-users",
+  isAuthenticated,
+  addMultipleUsersToGroup
+);
 
 export default router;

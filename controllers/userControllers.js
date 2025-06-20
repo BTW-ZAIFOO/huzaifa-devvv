@@ -339,8 +339,12 @@ export const searchUsers = catchAsyncError(async (req, res, next) => {
   }
   const users = await User.find({
     _id: { $ne: req.user._id },
-    name: { $regex: q, $options: "i" },
+    $or: [
+      { name: { $regex: q, $options: "i" } },
+      { email: { $regex: q, $options: "i" } },
+    ],
     accountVerified: true,
+    status: { $nin: ["banned", "blocked"] },
   }).select(
     "-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordExpire"
   );

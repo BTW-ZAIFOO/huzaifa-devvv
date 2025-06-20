@@ -383,3 +383,67 @@ export const getGroupChatById = catchAsyncError(async (req, res, next) => {
 
   res.status(200).json({ success: true, group: chat });
 });
+
+export const addMultipleUsersToGroup = catchAsyncError(
+  async (req, res, next) => {
+    const { chatId, userIds } = req.body;
+
+    if (
+      !chatId ||
+      !userIds ||
+      !Array.isArray(userIds) ||
+      userIds.length === 0
+    ) {
+      return next(new ErrorHandler("Please provide chat ID and user IDs", 400));
+    }
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return next(new ErrorHandler("Chat not found", 404));
+    }
+
+    if (!chat.isGroupChat) {
+      return next(new ErrorHandler("This is not a group chat", 400));
+    }
+
+    if (chat.groupAdmin.toString() !== req.user._id.toString()) {
+      return next(new ErrorHandler("Only admin can add members", 403));
+    }
+
+    const users = await User.find({
+      _id: { $in: userIds },
+      accountVerified: true,
+      status: { $nin: ["banned", "blocked"] },
+    });
+
+    if (users.length !== userIds.length) {
+      return next(
+        new ErrorHandler("Some users are not valid or available", 400)
+      );
+    }
+
+    const newUserIds = userIds.filter(
+      (userId) => !chat.participants.includes(userId)
+    );
+
+    if (newUserIds.length === 0) {
+      return next(
+        new ErrorHandler("All selected users are already in the group", 400)
+      );
+    }
+
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      { $addToSet: { participants: { $each: newUserIds } } },
+      { new: true }
+    )
+      .populate("participants", "name email avatar status")
+      .populate("groupAdmin", "name email avatar");
+
+    res.status(200).json({
+      success: true,
+      chat: updatedChat,
+      message: `${newUserIds.length} user(s) added to the group`,
+    });
+  }
+);
