@@ -60,8 +60,15 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    messageHash: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );
+
+messageSchema.index({ messageHash: 1 }, { unique: true, sparse: true });
 
 export const Message = mongoose.model("Message", messageSchema);

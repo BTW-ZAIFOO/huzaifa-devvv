@@ -4,6 +4,7 @@ import { Message } from "../models/messageModel.js";
 import { Chat } from "../models/chatModel.js";
 import { User } from "../models/userModal.js";
 import { moderateContent, transcribeAudio } from "../utils/openaiService.js";
+import crypto from "crypto";
 
 export const sendMessage = catchAsyncError(async (req, res, next) => {
   try {
@@ -18,6 +19,11 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
         )
       );
     }
+
+    const messageHash = crypto
+      .createHash("md5")
+      .update(`${req.user._id}-${content}-${Date.now()}`)
+      .digest("hex");
 
     let chat;
 
@@ -98,6 +104,7 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
       isVoice: isVoiceMessage,
       voiceTranscription,
       moderationResult,
+      messageHash,
     });
 
     chat.lastMessage = message._id;
@@ -108,8 +115,19 @@ export const sendMessage = catchAsyncError(async (req, res, next) => {
       .populate("recipient", "name avatar");
 
     const io = req.app.get("io");
-    if (io) {
+    if (io && populatedMessage) {
       io.to(chat._id.toString()).emit("new-message", populatedMessage);
+
+      chat.participants.forEach((participantId) => {
+        if (participantId.toString() !== req.user._id.toString()) {
+          io.to(participantId.toString()).emit("message-notification", {
+            chatId: chat._id,
+            message: populatedMessage,
+            from: req.user._id,
+          });
+        }
+      });
+
       io.to("admin-room").emit("admin-message-monitor", populatedMessage);
     }
 

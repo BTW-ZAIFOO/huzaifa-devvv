@@ -98,13 +98,63 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
+  socket.on("authenticate", (userId) => {
+    socket.userId = userId;
+    socket.join(userId.toString());
+    console.log(`User ${userId} authenticated and joined personal room`);
+  });
+
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
-    console.log(`User joined room: ${roomId}`);
+    console.log(`User ${socket.userId} joined room: ${roomId}`);
+
+    socket.to(roomId).emit("user-joined-room", {
+      userId: socket.userId,
+      roomId: roomId,
+    });
   });
 
   socket.on("leave-room", (roomId) => {
     socket.leave(roomId);
+    socket.to(roomId).emit("user-left-room", {
+      userId: socket.userId,
+      roomId: roomId,
+    });
+  });
+
+  socket.on("join-chat-room", (chatId) => {
+    socket.join(chatId);
+    console.log(`User ${socket.userId} joined chat room: ${chatId}`);
+  });
+
+  socket.on("typing-start", (data) => {
+    socket.to(data.chatId).emit("user-typing", {
+      userId: socket.userId,
+      chatId: data.chatId,
+      isTyping: true,
+    });
+  });
+
+  socket.on("typing-stop", (data) => {
+    socket.to(data.chatId).emit("user-typing", {
+      userId: socket.userId,
+      chatId: data.chatId,
+      isTyping: false,
+    });
+  });
+
+  socket.on("message-read", (data) => {
+    const { chatId, messageId, userId } = data;
+    if (chatId) {
+      socket.to(chatId).emit("message-read", { messageId, userId });
+    }
+  });
+
+  socket.on("message-received", (data) => {
+    const { chatId, messageId } = data;
+    if (chatId) {
+      socket.to(chatId).emit("message-delivered", { messageId });
+    }
   });
 
   socket.on("join-admin-room", () => {
@@ -136,21 +186,34 @@ io.on("connection", (socket) => {
 
   socket.on("new-message", (data) => {
     const { chatId, message } = data;
-    if (chatId) {
-      socket.to(chatId).emit("new-message", message);
-    }
-    io.to("admin-room").emit("new-message", message);
-  });
 
-  socket.on("message-read", (data) => {
-    const { chatId, messageId, userId } = data;
-    if (chatId) {
-      socket.to(chatId).emit("message-read", { messageId, userId });
+    if (chatId && message && message._id) {
+      if (!socket.broadcastedMessages) {
+        socket.broadcastedMessages = new Set();
+      }
+
+      if (socket.broadcastedMessages.has(message._id)) {
+        return;
+      }
+
+      socket.broadcastedMessages.add(message._id);
+
+      if (socket.broadcastedMessages.size > 1000) {
+        const messagesArray = Array.from(socket.broadcastedMessages);
+        socket.broadcastedMessages = new Set(messagesArray.slice(-500));
+      }
+
+      socket.to(chatId).emit("new-message", message);
+      io.to("admin-room").emit("new-message", message);
     }
   });
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
+
+    if (socket.userId) {
+      socket.broadcast.emit("user-disconnected", socket.userId);
+    }
   });
 
   socket.on("error", (error) => {

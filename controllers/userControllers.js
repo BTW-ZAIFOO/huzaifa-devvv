@@ -14,19 +14,8 @@ const client = twilio(
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
-    const { name, email, password, verificationMethod, role } = req.body;
-    if (!name || !email || !password || !verificationMethod) {
-      return next(new ErrorHandler("All fields are required.", 400));
-    }
-
-    const existingUser = await User.findOne({
-      $or: [
-        {
-          email,
-          accountVerified: true,
-        },
-      ],
-    });
+    const { name, email, password, role, verificationMethod } = req.body;
+    const existingUser = await User.findOne({ email, accountVerified: true });
 
     if (existingUser) {
       return next(new ErrorHandler("Email is already used.", 400));
@@ -53,9 +42,10 @@ export const register = catchAsyncError(async (req, res, next) => {
     };
 
     const user = await User.create(userData);
-    const verificationCode = await user.generateVerificationCode();
+    const verificationCode = user.generateVerificationCode();
+
     await user.save();
-    sendVerificationCode(
+    await sendVerificationCode(
       verificationMethod,
       verificationCode,
       name,

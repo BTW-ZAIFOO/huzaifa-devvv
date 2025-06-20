@@ -21,9 +21,22 @@ export const createChat = catchAsyncError(async (req, res, next) => {
 
   const existingChat = await Chat.findOne({
     participants: { $all: [req.user._id, recipientId] },
+    isGroupChat: { $ne: true },
   });
 
   if (existingChat) {
+    const io = req.app.get("io");
+    if (io) {
+      const userSocketId = req.user._id.toString();
+      const recipientSocketId = recipientId.toString();
+
+      io.to(userSocketId).emit("join-chat-room", existingChat._id.toString());
+      io.to(recipientSocketId).emit(
+        "join-chat-room",
+        existingChat._id.toString()
+      );
+    }
+
     return res.status(200).json({
       success: true,
       chat: existingChat,
@@ -33,6 +46,15 @@ export const createChat = catchAsyncError(async (req, res, next) => {
   const newChat = await Chat.create({
     participants: [req.user._id, recipientId],
   });
+
+  const io = req.app.get("io");
+  if (io) {
+    const userSocketId = req.user._id.toString();
+    const recipientSocketId = recipientId.toString();
+
+    io.to(userSocketId).emit("join-chat-room", newChat._id.toString());
+    io.to(recipientSocketId).emit("join-chat-room", newChat._id.toString());
+  }
 
   return res.status(201).json({
     success: true,

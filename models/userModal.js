@@ -91,13 +91,14 @@ userSchema.methods.generateVerificationCode = function () {
     const firstDigit = Math.floor(Math.random() * 9) + 1;
     const remainingDigits = Math.floor(Math.random() * 10000)
       .toString()
-      .padStart(4, 0);
+      .padStart(4, "0");
 
     return parseInt(firstDigit + remainingDigits);
   }
   const verificationCode = generateRandomFiveDigitNumber();
+
   this.verificationCode = verificationCode;
-  this.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
+  this.verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
   return verificationCode;
 };
