@@ -1,11 +1,11 @@
 import express from "express";
+import { isAuthenticated, authorizeRoles } from "../middlewares/auth.js";
 import {
   adminDeletePost,
   adminHidePost,
   adminWarnPostAuthor,
   getReportedPosts,
 } from "../controllers/adminController.js";
-import { isAuthenticated, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
 

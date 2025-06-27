@@ -1,12 +1,12 @@
 import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../middlewares/error.js";
+import { Message } from "../models/messageModel.js";
+import { User } from "../models/userModal.js";
 import {
   moderateContent,
   transcribeAudio,
   getSuggestion,
 } from "../utils/openaiService.js";
-import { Message } from "../models/messageModel.js";
-import { User } from "../models/userModal.js";
 
 export const moderateText = catchAsyncError(async (req, res, next) => {
   const { text } = req.body;
